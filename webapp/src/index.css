@@ -1,0 +1,40 @@
+@import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+  
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+
+  --color-surface: #ffffff;
+  --color-background: #f9fafb;
+}
+
+body {
+  background-color: var(--color-background);
+  color: #111827;
+  font-family: var(--font-sans);
+}
+
+@utility perspective-1000 {
+  perspective: 1000px;
+}
+
+@utility backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
