@@ -42,8 +42,8 @@ document.addEventListener("mouseup", (e) => {
   const selection = window.getSelection();
   const text = selection.toString().trim();
 
-  // Simple heuristic: Only lookup if text is relatively short (e.g. 1-3 words)
-  if (text.length > 0 && text.length < 50 && text.split(/\s+/).length <= 4) {
+  // Allow lookups for short words or longer sentences (up to 300 characters)
+  if (text.length > 0 && text.length <= 300) {
     currentSelection = text;
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
@@ -61,17 +61,32 @@ document.addEventListener("mouseup", (e) => {
 
 function renderLookupPrompt() {
   tooltipContainer.innerHTML = `
-    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
-      <span style="font-size: 14px; font-weight: 500; color: #1f2937; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Tra từ "${currentSelection}"?</span>
-      <button id="vocab-confirm-lookup-btn" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;">Lookup <svg style="display:inline-block; margin-left:2px; margin-bottom:-2px;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-size: 14px; font-weight: 500; color: #1f2937; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Tra cứu "${currentSelection}"?</span>
+      <div style="display: flex; gap: 8px;">
+        <button id="vocab-confirm-lookup-btn" style="flex: 1; background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;">Tra Từ (Word)</button>
+        <button id="vocab-sentence-lookup-btn" style="flex: 1; background: #0d9488; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;">Dịch Câu (Collocations)</button>
+      </div>
     </div>
   `;
 
   document.getElementById("vocab-confirm-lookup-btn").addEventListener("click", () => {
-    renderLoading();
-    chrome.runtime.sendMessage({ action: "lookup", word: currentSelection }, (response) => {
-      if (response && response.success) {
-        currentWordData = response.data;
+    executeLookup("lookup");
+  });
+
+  document.getElementById("vocab-sentence-lookup-btn").addEventListener("click", () => {
+    executeLookup("lookup_sentence");
+  });
+}
+
+function executeLookup(actionType) {
+  renderLoading();
+  chrome.runtime.sendMessage({ action: actionType, word: currentSelection }, (response) => {
+    if (response && response.success) {
+      currentWordData = response.data;
+      if (currentWordData.isSentence) {
+        renderSentenceContent(currentWordData);
+      } else {
         renderContent(currentWordData, currentWordData.isAlreadySaved);
         
         // Only trigger AI enrichment if the word is not already fully saved
@@ -100,11 +115,10 @@ function renderLookupPrompt() {
             }
           });
         }
-
-      } else {
-        renderError();
       }
-    });
+    } else {
+      renderError();
+    }
   });
 }
 
@@ -201,6 +215,106 @@ function renderContent(data, isEnriched = false) {
         btn.disabled = false;
         alert(res.error || "Failed to save word. Please login in the extension popup.");
       }
+    });
+  });
+}
+
+function renderSentenceContent(data) {
+  let collocationsHtml = '';
+  if (data.extracted_collocations && data.extracted_collocations.length > 0) {
+    collocationsHtml = `
+      <div class="vocab-section-title" style="color: #0f766e; margin-top: 12px;">Collocations / Idioms</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
+        ${data.extracted_collocations.map((c, index) => `
+          <div style="background: #f0fdfa; border: 1px solid #ccfbf1; padding: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+            <div style="flex: 1; min-width: 0;">
+              <p style="font-weight: 600; color: #0d9488; font-size: 13px; margin: 0;">${c.collocation}</p>
+              <p style="color: #115e59; font-size: 12px; margin: 2px 0 0 0;">${c.meaning_vi}</p>
+            </div>
+            <button class="vocab-save-colloc-btn" data-index="${index}" style="background: #0d9488; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; cursor: pointer;">Save</button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  tooltipContainer.innerHTML = `
+    <div class="vocab-header" style="align-items: flex-start; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 8px;">
+      <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0;">
+        <span style="font-size: 11px; background: #fce7f3; color: #be185d; padding: 2px 6px; border-radius: 4px; border: 1px solid #fbcfe8; font-weight: 600; width: fit-content;">Sentence Translation</span>
+        <p style="font-size: 13px; color: #4b5563; font-style: italic; margin: 4px 0 0 0; word-break: break-word; line-height: 1.4;">"${formatMultilineText(data.word)}"</p>
+        <p style="font-size: 14px; color: #2563eb; font-weight: 600; margin: 4px 0 0 0; line-height: 1.4;">${formatMultilineText(data.short_meaning_vi)}</p>
+        ${data.definition_vi ? `<p style="font-size: 12px; color: #6b7280; margin: 4px 0 0 0;">${formatMultilineText(data.definition_vi)}</p>` : ''}
+      </div>
+    </div>
+    
+    <button class="vocab-save-btn" id="vocab-save-sentence-btn" style="width: 100%; margin-bottom: 8px;">Lưu câu này (Save Sentence)</button>
+    
+    ${collocationsHtml}
+  `;
+
+  // Handle Save Sentence
+  document.getElementById("vocab-save-sentence-btn").addEventListener("click", (e) => {
+    const btn = e.target;
+    if (btn.disabled) return;
+    
+    const sentenceData = {
+      word: data.word,
+      short_meaning_vi: data.short_meaning_vi,
+      definition_en: "Sentence",
+      definition_vi: data.definition_vi || data.short_meaning_vi,
+      example: data.word,
+      example_translation_vi: data.short_meaning_vi,
+      topic: "Uncategorized",
+      type: "sentence",
+      isAlreadySaved: false
+    };
+
+    btn.textContent = "Saving...";
+    btn.disabled = true;
+    chrome.runtime.sendMessage({ action: "save", data: sentenceData }, (res) => {
+      if (res && res.success) {
+        btn.textContent = "Saved";
+        btn.style.background = "#10b981";
+      } else {
+        btn.textContent = "Error";
+        btn.disabled = false;
+        alert(res?.error || "Failed to save.");
+      }
+    });
+  });
+
+  // Handle Save Collocations
+  const collocBtns = tooltipContainer.querySelectorAll('.vocab-save-colloc-btn');
+  collocBtns.forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      if (btn.disabled) return;
+      const index = btn.getAttribute("data-index");
+      const c = data.extracted_collocations[index];
+      
+      const collocData = {
+        word: c.base_form || c.collocation,
+        short_meaning_vi: c.meaning_vi,
+        definition_en: "Collocation / Idiom",
+        definition_vi: c.meaning_vi,
+        example: data.word,
+        example_translation_vi: data.short_meaning_vi,
+        topic: "Uncategorized",
+        type: "collocation",
+        isAlreadySaved: false
+      };
+
+      btn.textContent = "...";
+      btn.disabled = true;
+      chrome.runtime.sendMessage({ action: "save", data: collocData }, (res) => {
+        if (res && res.success) {
+          btn.textContent = "✔";
+          btn.style.background = "#10b981";
+        } else {
+          btn.textContent = "X";
+          btn.disabled = false;
+        }
+      });
     });
   });
 }

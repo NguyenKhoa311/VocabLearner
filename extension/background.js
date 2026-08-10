@@ -41,6 +41,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Keep the message channel open for async response
   }
 
+  if (request.action === "lookup_sentence") {
+    lookupSentence(request.word).then(data => {
+      if (data) {
+        sendResponse({ success: true, data: data });
+      } else {
+        sendResponse({ success: false });
+      }
+    });
+    return true;
+  }
+
   if (request.action === "enrich") {
     enrichWord(request.word).then(data => {
       if (data) {
@@ -302,6 +313,44 @@ Return a JSON object strictly following this structure (do not include markdown 
   return null;
 }
 
+async function lookupSentence(sentence) {
+  console.log("Looking up as sentence:", sentence);
+  if (GEMINI_API_KEYS.length === 0 || GEMINI_API_KEYS[0] === "YOUR_GEMINI_API_KEY") return null;
+
+  const prompt = `You are a vocabulary helper. Analyze the following sentence/phrase: "${sentence}". 
+Return a JSON object strictly following this structure (do not include markdown wrapping, just the JSON string):
+{
+  "isSentence": true,
+  "word": "${sentence.replace(/"/g, '\\"')}",
+  "short_meaning_vi": "Bản dịch tự nhiên của câu sang tiếng Việt",
+  "definition_vi": "Giải thích ngắn gọn cấu trúc hoặc ngữ cảnh của câu (tùy chọn)",
+  "extracted_collocations": [
+    {
+      "collocation": "phrasal verb, idiom, or collocation found in the sentence",
+      "meaning_vi": "Nghĩa tiếng Việt của cụm từ",
+      "base_form": "Dạng nguyên thể (VD: to make a decision)"
+    }
+  ]
+}`;
+
+  try {
+    const res = await fetchFromGeminiWithRotation(prompt);
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data.candidates && data.candidates.length > 0) {
+        let textResult = data.candidates[0].content.parts[0].text;
+        const jsonMatch = textResult.match(/\{[\s\S]*\}/);
+        if (jsonMatch) textResult = jsonMatch[0];
+        else textResult = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(textResult);
+      }
+    }
+  } catch (error) {
+    console.error("Gemini sentence lookup failed", error);
+  }
+  return null;
+}
+
 async function saveToFirestore(data) {
   const FIREBASE_PROJECT_ID = "vocalhelper";
   const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/words`;
@@ -316,6 +365,7 @@ async function saveToFirestore(data) {
       example: { stringValue: data.example || "" },
       example_translation_vi: { stringValue: data.example_translation_vi || "" },
       topic: { stringValue: data.topic || "Uncategorized" },
+      type: { stringValue: data.type || "word" },
       createdAt: { timestampValue: new Date().toISOString() },
       nextReviewDate: { timestampValue: new Date().toISOString() },
       srsLevel: { integerValue: 0 }

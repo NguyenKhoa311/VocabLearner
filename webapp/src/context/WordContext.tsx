@@ -16,6 +16,7 @@ export interface WordData {
   topic: string;
   forms?: string[];
   collocations?: string[];
+  type?: "word" | "sentence" | "collocation";
   srsLevel: number;
   interval?: number;
   repetition?: number;

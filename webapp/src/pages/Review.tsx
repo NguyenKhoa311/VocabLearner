@@ -386,9 +386,13 @@ export default function Review() {
         </div>
 
         <div className="text-center mt-4">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <h2 className="text-4xl font-bold text-blue-600 dark:text-blue-400">{word.short_meaning_vi || word.word}</h2>
-            <span className="bg-slate-100 dark:bg-[#2d3248] text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded text-sm border border-slate-200 dark:border-[#3e445b]">{word.part_of_speech || "Từ vựng"}</span>
+          <div className="flex flex-col items-center justify-center gap-3 mb-2">
+            <h2 className={`font-bold text-blue-600 dark:text-blue-400 text-center ${word.type === 'sentence' ? 'text-2xl leading-relaxed' : 'text-4xl'}`}>
+              {word.short_meaning_vi || word.word}
+            </h2>
+            <span className="bg-slate-100 dark:bg-[#2d3248] text-slate-600 dark:text-slate-300 px-3 py-1 rounded-lg text-sm border border-slate-200 dark:border-[#3e445b] font-medium">
+              {word.type === 'sentence' ? 'Sentence' : word.type === 'collocation' ? 'Collocation' : (word.part_of_speech || "Từ vựng")}
+            </span>
           </div>
 
           {isRevealed && word.phonetic && (

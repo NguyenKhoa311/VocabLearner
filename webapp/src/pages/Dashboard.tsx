@@ -392,13 +392,21 @@ Return a JSON object strictly following this structure (do not include markdown 
               </button>
 
               <div className="flex flex-col gap-1 pr-8">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-extrabold text-slate-800 dark:text-white">{w.word}</h3>
-                  {w.part_of_speech && (
-                    <span className="bg-[#e0e7ff] dark:bg-blue-900/30 text-[#3730a3] dark:text-blue-300 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-[#c7d2fe] dark:border-blue-500/30 shadow-sm">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-xl font-extrabold text-slate-800 dark:text-white line-clamp-2">{w.word}</h3>
+                  {w.type === 'sentence' ? (
+                    <span className="bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-pink-200 dark:border-pink-500/30 shadow-sm shrink-0">
+                      Sentence
+                    </span>
+                  ) : w.type === 'collocation' ? (
+                    <span className="bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-teal-200 dark:border-teal-500/30 shadow-sm shrink-0">
+                      Collocation
+                    </span>
+                  ) : w.part_of_speech ? (
+                    <span className="bg-[#e0e7ff] dark:bg-blue-900/30 text-[#3730a3] dark:text-blue-300 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-[#c7d2fe] dark:border-blue-500/30 shadow-sm shrink-0">
                       {w.part_of_speech}
                     </span>
-                  )}
+                  ) : null}
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
