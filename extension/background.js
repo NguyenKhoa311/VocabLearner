@@ -1,4 +1,4 @@
-const GEMINI_API_KEY_STRING = "YOUR_GEMINI_API_KEY_1, YOUR_GEMINI_API_KEY_2";
+import { GEMINI_API_KEY_STRING } from './env.js';
 const GEMINI_API_KEYS = GEMINI_API_KEY_STRING.split(',').map(k => k.trim()).filter(k => k);
 const pendingEnrichments = new Map();
 

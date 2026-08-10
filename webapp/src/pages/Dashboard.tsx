@@ -133,8 +133,8 @@ export default function Dashboard() {
     if (!viewingWord) return;
     setRefreshingAI(true);
     try {
-      const GEMINI_API_KEY_STRING = "YOUR_GEMINI_API_KEY_1, YOUR_GEMINI_API_KEY_2";
-      const GEMINI_API_KEYS = GEMINI_API_KEY_STRING.split(',').map(k => k.trim()).filter(k => k);
+      const GEMINI_API_KEY_STRING = import.meta.env.VITE_GEMINI_API_KEYS || "";
+      const GEMINI_API_KEYS = GEMINI_API_KEY_STRING.split(',').map((k: string) => k.trim()).filter((k: string) => k);
       const prompt = `You are a vocabulary helper. Analyze the word/phrase: "${viewingWord.word}". 
 Return a JSON object strictly following this structure (do not include markdown wrapping, just the JSON string):
 {
