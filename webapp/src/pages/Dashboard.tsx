@@ -236,7 +236,7 @@ Return a JSON object strictly following this structure (do not include markdown 
     }, {} as Record<string, WordData[]>);
   }, [words]);
 
-  const rawTopicWords = selectedTopic ? (groupedWords[selectedTopic] || []) : [];
+  const rawTopicWords = selectedTopic ? (groupedWords[selectedTopic] || []) : words;
   
   const topicWords = useMemo(() => {
     let filtered = rawTopicWords;
@@ -281,6 +281,19 @@ Return a JSON object strictly following this structure (do not include markdown 
     }
 
     return (
+      <div className="space-y-8">
+        {/* Global Search Bar */}
+        <div className="max-w-2xl mx-auto w-full relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 size-6" />
+          <input 
+            type="text"
+            placeholder="Tìm kiếm từ vựng trên toàn bộ các chủ đề..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white dark:bg-[#1e2235] text-slate-800 dark:text-white border-2 border-slate-200 dark:border-[#2d3248] rounded-2xl pl-12 pr-4 py-4 text-lg focus:outline-none focus:border-blue-500 transition-colors shadow-sm"
+          />
+        </div>
+
       <motion.div 
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
         initial="hidden"
@@ -322,6 +335,7 @@ Return a JSON object strictly following this structure (do not include markdown 
           </motion.div>
         ))}
       </motion.div>
+      </div>
     );
   };
 
@@ -344,6 +358,7 @@ Return a JSON object strictly following this structure (do not include markdown 
           <div className="flex-1 max-w-md mx-auto w-full relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 size-5" />
             <input 
+              autoFocus={!selectedTopic}
               type="text"
               placeholder="Tìm kiếm từ vựng..."
               value={searchQuery}
@@ -848,7 +863,7 @@ Return a JSON object strictly following this structure (do not include markdown 
         </div>
       </div>
 
-      {selectedTopic ? renderWordsView() : renderTopicsView()}
+      {selectedTopic || searchQuery.trim() !== "" ? renderWordsView() : renderTopicsView()}
     </div>
   );
 }
