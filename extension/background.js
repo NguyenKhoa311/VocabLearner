@@ -4,7 +4,7 @@ const pendingEnrichments = new Map();
 
 async function fetchFromGeminiWithRotation(prompt) {
   if (GEMINI_API_KEYS.length === 0 || GEMINI_API_KEYS[0] === "YOUR_GEMINI_API_KEY") return null;
-  const GOOGLE_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash-lite-preview-02-05", "gemini-1.5-pro"];
+  const GOOGLE_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.5-pro"];
   
   for (const key of GEMINI_API_KEYS) {
     for (const model of GOOGLE_MODELS) {
