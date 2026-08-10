@@ -1,5 +1,5 @@
 import { GEMINI_API_KEY_STRING } from './env.js';
-const GEMINI_API_KEYS = GEMINI_API_KEY_STRING.split(',').map(k => k.trim()).filter(k => k);
+const GEMINI_API_KEYS = GEMINI_API_KEY_STRING.replace(/["']/g, '').split(',').map(k => k.trim()).filter(k => k);
 const pendingEnrichments = new Map();
 
 async function fetchFromGeminiWithRotation(prompt) {
@@ -333,7 +333,6 @@ async function lookupSentence(sentence) {
   const prompt = `You are a vocabulary helper. Analyze the following sentence/phrase: "${sentence}". 
 Return a JSON object strictly following this structure (do not include markdown wrapping, just the JSON string):
 {
-  "isSentence": true,
   "word": "${sentence.replace(/"/g, '\\"')}",
   "short_meaning_vi": "Bản dịch tự nhiên của câu sang tiếng Việt",
   "definition_vi": "Giải thích ngắn gọn cấu trúc hoặc ngữ cảnh của câu (tùy chọn)",
@@ -355,7 +354,9 @@ Return a JSON object strictly following this structure (do not include markdown 
         const jsonMatch = textResult.match(/\{[\s\S]*\}/);
         if (jsonMatch) textResult = jsonMatch[0];
         else textResult = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(textResult);
+        const parsed = JSON.parse(textResult);
+        parsed.isSentence = true; // Attach manually to avoid AI translating 'true' to 'thật'
+        return parsed;
       }
     }
   } catch (error) {

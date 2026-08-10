@@ -134,7 +134,16 @@ export default function Dashboard() {
     setRefreshingAI(true);
     try {
       const GEMINI_API_KEY_STRING = import.meta.env.VITE_GEMINI_API_KEYS || "";
-      const GEMINI_API_KEYS = GEMINI_API_KEY_STRING.split(',').map((k: string) => k.trim()).filter((k: string) => k);
+      const GEMINI_API_KEYS = GEMINI_API_KEY_STRING
+        .replace(/["']/g, '') // Strip out accidental quotes from GitHub Secrets
+        .split(',')
+        .map((k: string) => k.trim())
+        .filter((k: string) => k);
+
+      if (GEMINI_API_KEYS.length === 0) {
+        throw new Error("NO_API_KEYS");
+      }
+
       const prompt = `You are a vocabulary helper. Analyze the word/phrase: "${viewingWord.word}". 
 Return a JSON object strictly following this structure (do not include markdown wrapping, just the JSON string):
 {
@@ -168,7 +177,9 @@ Return a JSON object strictly following this structure (do not include markdown 
       }
       
       if (!success || !res || !res.ok) {
+        console.error("Gemini API failed with status:", res?.status, "Available keys:", GEMINI_API_KEYS.length);
         if (res && res.status === 429) throw new Error("429_TOO_MANY_REQUESTS");
+        if (res && res.status === 400) throw new Error("400_API_KEY_INVALID");
         throw new Error("Failed to call Gemini API");
       }
       const data = await res.json();
@@ -204,6 +215,10 @@ Return a JSON object strictly following this structure (do not include markdown 
       console.error(e);
       if (e.message === "429_TOO_MANY_REQUESTS") {
         alert("Hệ thống AI đang quá tải do giới hạn số lượt truy cập của Google. Bạn vui lòng đợi khoảng 1 phút rồi thử lại nhé!");
+      } else if (e.message === "400_API_KEY_INVALID") {
+        alert("API Key không hợp lệ (lỗi 400). Hãy kiểm tra xem bạn copy key vào Github Secrets đã chuẩn chưa.");
+      } else if (e.message === "NO_API_KEYS") {
+        alert("Chưa cấu hình API Key trên Github. Vui lòng thêm VITE_GEMINI_API_KEYS vào Github Secrets.");
       } else {
         alert("Có lỗi xảy ra khi gọi AI. Vui lòng thử lại sau.");
       }
