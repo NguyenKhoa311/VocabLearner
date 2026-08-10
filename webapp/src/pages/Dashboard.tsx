@@ -580,7 +580,7 @@ Return a JSON object strictly following this structure (do not include markdown 
                             className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
                           />
                         </div>
-                        <div className="flex gap-4">
+                        <div className="flex flex-col sm:flex-row gap-4">
                           <div className="flex-1">
                             <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Loại từ</label>
                             <input 

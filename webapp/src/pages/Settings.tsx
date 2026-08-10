@@ -134,7 +134,7 @@ export default function Settings() {
           </h2>
           
           <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#151822] rounded-2xl border border-slate-100 dark:border-[#2d3248]">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-[#151822] rounded-2xl border border-slate-100 dark:border-[#2d3248]">
               <div>
                 <p className="font-bold text-slate-700 dark:text-slate-200">Theme</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Toggle between Light and Dark mode for the dashboard.</p>
@@ -155,7 +155,7 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#151822] rounded-2xl border border-slate-100 dark:border-[#2d3248]">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-[#151822] rounded-2xl border border-slate-100 dark:border-[#2d3248]">
               <div>
                 <p className="font-bold text-slate-700 dark:text-slate-200">Daily Study Goal</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">How many cards do you want to review per day?</p>
@@ -186,7 +186,7 @@ export default function Settings() {
             Download a copy of all your saved vocabulary. You can use CSV to open in Excel/Google Sheets, or JSON for developers and Anki integrations.
           </p>
 
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <button 
               onClick={exportCSV}
               disabled={exporting}

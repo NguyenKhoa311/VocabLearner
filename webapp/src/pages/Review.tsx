@@ -436,7 +436,7 @@ export default function Review() {
           {!isRevealed ? (
             <div className="w-full max-w-lg flex flex-col items-center">
               <div className="flex flex-col items-center gap-4 mb-6">
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
                   <div className="border border-dashed border-slate-300 dark:border-[#3e445b] bg-slate-50 dark:bg-[#1a1d2d] rounded-lg px-8 py-3 text-2xl tracking-widest text-slate-800 dark:text-white font-mono shadow-inner min-w-[120px] text-center">
                     {getHintDisplay()}
                   </div>
@@ -480,7 +480,7 @@ export default function Review() {
                 autoFocus
               />
 
-              <div className="flex gap-4 w-full">
+              <div className="flex flex-col sm:flex-row gap-4 w-full">
                 <button 
                   onClick={handleDontKnow}
                   className="flex-1 bg-[#ef4444] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-600 transition-colors"
@@ -534,7 +534,7 @@ export default function Review() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="max-w-4xl mx-auto grid grid-cols-4 gap-4"
+            className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-3"
           >
             <button onClick={() => handleRate(0)} className="py-4 px-2 rounded-xl bg-[#1f161c] text-[#ef4444] border border-[#ef4444]/30 hover:bg-[#ef4444]/20 transition-all font-bold flex flex-col items-center">
               <span>HỌC LẠI</span>
