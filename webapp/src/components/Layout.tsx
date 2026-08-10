@@ -19,7 +19,7 @@ export default function Layout() {
       {/* Sidebar Navigation */}
       <nav className="w-64 bg-white/80 dark:bg-[#151822]/80 backdrop-blur-xl border-r border-slate-200/50 dark:border-[#222634]/50 h-screen flex flex-col p-4 fixed transition-colors duration-300 z-10">
         <div className="flex items-center gap-3 px-2 mb-8 mt-2">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-500/30">V</div>
+          <img src="/favicon.png" alt="Logo" className="w-9 h-9 rounded-xl shadow-lg shadow-blue-500/30" />
           <span className="font-extrabold text-xl tracking-tight text-slate-800 dark:text-white">VocabHelper</span>
         </div>
         
