@@ -4,7 +4,7 @@ const pendingEnrichments = new Map();
 
 async function fetchFromGeminiWithRotation(prompt) {
   if (GEMINI_API_KEYS.length === 0 || GEMINI_API_KEYS[0] === "YOUR_GEMINI_API_KEY") return null;
-  const GOOGLE_MODELS = ["gemini-2.5-flash-lite", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
+  const GOOGLE_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash-lite-preview-02-05", "gemini-1.5-pro"];
   
   for (const key of GEMINI_API_KEYS) {
     for (const model of GOOGLE_MODELS) {
@@ -16,8 +16,8 @@ async function fetchFromGeminiWithRotation(prompt) {
         });
         if (res.ok) return res;
         if (res.status === 429) {
-          console.warn(`Key ending in ${key.slice(-4)} rate limited. Trying next key.`);
-          break; // Try next key
+          console.warn(`Model ${model} rate limited for key ${key.slice(-4)}. Trying next model.`);
+          continue; // Try next model instead of next key, because limit is per-model
         }
         console.warn(`Model ${model} failed with status ${res.status}. Trying next model.`);
       } catch (e) {
@@ -214,6 +214,19 @@ async function checkWordInFirestore(word) {
   return null;
 }
 
+async function safeJsonFetch(url) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const text = await r.text();
+    if (!text || text.trim() === "") return null;
+    return JSON.parse(text);
+  } catch (e) {
+    console.warn(`safeJsonFetch warning for ${url}:`, e);
+    return null;
+  }
+}
+
 async function lookupWord(word) {
   // 1. Check if word already exists in Database
   const existingWord = await checkWordInFirestore(word);
@@ -224,8 +237,8 @@ async function lookupWord(word) {
 
   // 2. Fast Dictionary Lookup (Sub-second response)
   try {
-    const dictPromise = fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`).then(r => r.ok ? r.json() : null);
-    const transPromise = fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=${encodeURIComponent(word)}`).then(r => r.ok ? r.json() : null);
+    const dictPromise = safeJsonFetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+    const transPromise = safeJsonFetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=${encodeURIComponent(word)}`);
     
     const [dictData, transData] = await Promise.all([dictPromise, transPromise]);
     
@@ -252,7 +265,7 @@ async function lookupWord(word) {
       };
     }
   } catch (e) {
-    console.error("Fast dictionary failed, falling back to Gemini API", e);
+    console.warn("Fast dictionary failed, falling back to Gemini API", e);
   }
 
   // Fallback to Gemini AI if fast dictionary fails (e.g. phrases, idioms)
@@ -306,10 +319,10 @@ Return a JSON object strictly following this structure (do not include markdown 
       }
     }
   } catch (error) {
-    console.error("Gemini fallback failed", error);
+    console.warn("Gemini fallback failed", error);
   }
 
-  console.error("All models failed.");
+  console.warn("All models failed.");
   return null;
 }
 
@@ -346,7 +359,7 @@ Return a JSON object strictly following this structure (do not include markdown 
       }
     }
   } catch (error) {
-    console.error("Gemini sentence lookup failed", error);
+    console.warn("Gemini sentence lookup failed", error);
   }
   return null;
 }
