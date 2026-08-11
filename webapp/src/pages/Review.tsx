@@ -27,7 +27,7 @@ export default function Review() {
 
   const startSrsMode = () => {
     const now = Date.now();
-    const due = allWords.filter(w => !w.nextReviewDate || w.nextReviewDate <= now);
+    const due = allWords.filter(w => !w.isMastered && (!w.nextReviewDate || w.nextReviewDate <= now));
     setStudyList(due);
     setMode('srs');
     setCurrentIndex(0);
@@ -76,45 +76,50 @@ export default function Review() {
     
     // Only update Firebase if we are in SRS mode
     if (mode === 'srs') {
-      let interval = currentWord.interval || 0;
-      let repetition = currentWord.repetition || 0;
-      let easeFactor = currentWord.easeFactor || 2.5;
+      let interval = 0;
 
-      if (quality < 3) {
-        repetition = 0;
-        interval = 1;
-      } else {
-        if (repetition === 0) {
-          interval = 1;
-        } else if (repetition === 1) {
-          interval = 6;
-        } else {
-          interval = Math.round(interval * easeFactor);
-        }
-        repetition += 1;
-      }
-
-      easeFactor = easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
-      if (easeFactor < 1.3) easeFactor = 1.3;
+      if (quality === 0) interval = 1;      // Học lại
+      else if (quality === 2) interval = 2; // Khó
+      else if (quality === 4) interval = 4; // Tốt
+      else if (quality === 5) interval = 6; // Dễ
 
       const nextReviewDate = Date.now() + interval * 24 * 60 * 60 * 1000;
-      const srsLevel = repetition;
+      const srsLevel = (currentWord.srsLevel || 0) + 1;
 
       try {
         const wordRef = doc(db, 'words', currentWord.id);
         await updateDoc(wordRef, {
           interval,
-          repetition,
-          easeFactor,
           nextReviewDate,
-          srsLevel
+          srsLevel,
+          isMastered: false
         });
       } catch (error) {
         console.error("Error updating SRS data:", error);
       }
     }
 
-    // Move to next word
+    moveToNextWord();
+  };
+
+  const handleMastered = async () => {
+    const currentWord = studyList[currentIndex];
+    
+    if (mode === 'srs') {
+      try {
+        const wordRef = doc(db, 'words', currentWord.id);
+        await updateDoc(wordRef, {
+          isMastered: true
+        });
+      } catch (error) {
+        console.error("Error marking as mastered:", error);
+      }
+    }
+
+    moveToNextWord();
+  };
+
+  const moveToNextWord = () => {
     setIsRevealed(false);
     setInputValue('');
     setHintLevel(0);
@@ -136,11 +141,11 @@ export default function Review() {
 
   if (mode === 'idle') {
     const now = Date.now();
-    const dueWordsCount = allWords.filter(w => !w.nextReviewDate || w.nextReviewDate <= now).length;
+    const dueWordsCount = allWords.filter(w => !w.isMastered && (!w.nextReviewDate || w.nextReviewDate <= now)).length;
     
     let nextReviewText = "";
     if (allWords.length > 0) {
-      const futureWords = allWords.filter(w => w.nextReviewDate && w.nextReviewDate > now);
+      const futureWords = allWords.filter(w => !w.isMastered && w.nextReviewDate && w.nextReviewDate > now);
       if (futureWords.length > 0) {
         const nextTime = Math.min(...futureWords.map(w => w.nextReviewDate!));
         const diffHours = (nextTime - now) / (1000 * 60 * 60);
@@ -538,24 +543,32 @@ export default function Review() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-3"
           >
-            <button onClick={() => handleRate(0)} className="py-4 px-2 rounded-xl bg-[#1f161c] text-[#ef4444] border border-[#ef4444]/30 hover:bg-[#ef4444]/20 transition-all font-bold flex flex-col items-center">
-              <span>HỌC LẠI</span>
-              {mode === 'srs' && <span className="text-[12px] opacity-70 mt-1 font-normal text-[#8b92a5]">&lt; 1 phút</span>}
-            </button>
-            <button onClick={() => handleRate(2)} className="py-4 px-2 rounded-xl bg-[#2a1c18] text-[#f59e0b] border border-[#f59e0b]/30 hover:bg-[#f59e0b]/20 transition-all font-bold flex flex-col items-center">
-              <span>KHÓ</span>
-              {mode === 'srs' && <span className="text-[12px] opacity-70 mt-1 font-normal text-[#8b92a5]">1 ngày</span>}
-            </button>
-            <button onClick={() => handleRate(4)} className="py-4 px-2 rounded-xl bg-[#14231b] text-[#22c55e] border border-[#22c55e]/30 hover:bg-[#22c55e]/20 transition-all font-bold flex flex-col items-center">
-              <span>TỐT</span>
-              {mode === 'srs' && <span className="text-[12px] opacity-70 mt-1 font-normal text-[#8b92a5]">~ Vài ngày</span>}
-            </button>
-            <button onClick={() => handleRate(5)} className="py-4 px-2 rounded-xl bg-[#171d33] text-[#3b82f6] border border-[#3b82f6]/30 hover:bg-[#3b82f6]/20 transition-all font-bold flex flex-col items-center">
-              <span>DỄ</span>
-              {mode === 'srs' && <span className="text-[12px] opacity-70 mt-1 font-normal text-[#8b92a5]">~ Vài tuần</span>}
-            </button>
+            <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <button onClick={() => handleRate(0)} className="py-4 px-2 rounded-xl bg-[#1f161c] text-[#ef4444] border border-[#ef4444]/30 hover:bg-[#ef4444]/20 transition-all font-bold flex flex-col items-center">
+                <span>HỌC LẠI</span>
+                {mode === 'srs' && <span className="text-[12px] opacity-70 mt-1 font-normal text-[#8b92a5]">1 ngày</span>}
+              </button>
+              <button onClick={() => handleRate(2)} className="py-4 px-2 rounded-xl bg-[#2a1c18] text-[#f59e0b] border border-[#f59e0b]/30 hover:bg-[#f59e0b]/20 transition-all font-bold flex flex-col items-center">
+                <span>KHÓ</span>
+                {mode === 'srs' && <span className="text-[12px] opacity-70 mt-1 font-normal text-[#8b92a5]">2 ngày</span>}
+              </button>
+              <button onClick={() => handleRate(4)} className="py-4 px-2 rounded-xl bg-[#14231b] text-[#22c55e] border border-[#22c55e]/30 hover:bg-[#22c55e]/20 transition-all font-bold flex flex-col items-center">
+                <span>TỐT</span>
+                {mode === 'srs' && <span className="text-[12px] opacity-70 mt-1 font-normal text-[#8b92a5]">4 ngày</span>}
+              </button>
+              <button onClick={() => handleRate(5)} className="py-4 px-2 rounded-xl bg-[#171d33] text-[#3b82f6] border border-[#3b82f6]/30 hover:bg-[#3b82f6]/20 transition-all font-bold flex flex-col items-center">
+                <span>DỄ</span>
+                {mode === 'srs' && <span className="text-[12px] opacity-70 mt-1 font-normal text-[#8b92a5]">6 ngày</span>}
+              </button>
+            </div>
+            
+            <div className="max-w-4xl mx-auto mt-3">
+              <button onClick={handleMastered} className="w-full py-4 px-2 rounded-xl bg-[#2a2d3e] text-[#a5b4fc] border border-[#a5b4fc]/30 hover:bg-[#a5b4fc]/20 transition-all font-bold flex flex-col items-center">
+                <span>ĐÃ THÀNH THẠO</span>
+                {mode === 'srs' && <span className="text-[12px] opacity-70 mt-1 font-normal text-[#8b92a5]">Không ôn tập lại nữa</span>}
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -551,7 +551,7 @@ async function checkDueWords() {
 chrome.notifications.onClicked.addListener((notificationId) => {
   if (notificationId === "srs-reminder-notification") {
     // Open Web App to Review page
-    chrome.tabs.create({ url: "http://localhost:5173/review" });
+    chrome.tabs.create({ url: "https://vocalhelper.web.app/review" });
     chrome.notifications.clear(notificationId);
   }
 });

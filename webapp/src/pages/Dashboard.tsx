@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Clock, Loader2, Volume2, Folder, ArrowLeft, Edit2, Trash2, CheckSquare, Square, Search, ChevronLeft, ChevronRight, X, Lightbulb } from 'lucide-react';
+import { Clock, Loader2, Volume2, Folder, ArrowLeft, Edit2, Trash2, CheckSquare, Square, Search, ChevronLeft, ChevronRight, X, Lightbulb, AlertTriangle } from 'lucide-react';
 import { useWords, type WordData } from '../context/WordContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -280,8 +280,46 @@ Return a JSON object strictly following this structure (do not include markdown 
       );
     }
 
+    const now = Date.now();
+    const masteredCount = words.filter(w => w.isMastered).length;
+    const reviewCount = words.filter(w => !w.isMastered && (!w.nextReviewDate || w.nextReviewDate <= now)).length;
+    const learningCount = words.length - masteredCount - reviewCount;
+
     return (
       <div className="space-y-8">
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="bg-white dark:bg-[#1e2235] p-5 rounded-2xl border border-slate-200 dark:border-[#2d3248] shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-bold mb-1">Đã thuộc (Thành thạo)</p>
+              <h3 className="text-2xl font-black text-green-500">{masteredCount}</h3>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-500/10 flex items-center justify-center text-green-500">
+              <CheckSquare size={24} />
+            </div>
+          </div>
+          
+          <div className="bg-white dark:bg-[#1e2235] p-5 rounded-2xl border border-slate-200 dark:border-[#2d3248] shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-bold mb-1">Cần ôn tập tiếp</p>
+              <h3 className="text-2xl font-black text-orange-500">{reviewCount}</h3>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-500">
+              <AlertTriangle size={24} />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-[#1e2235] p-5 rounded-2xl border border-slate-200 dark:border-[#2d3248] shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-bold mb-1">Đang học</p>
+              <h3 className="text-2xl font-black text-blue-500">{learningCount}</h3>
+            </div>
+            <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-500">
+              <Clock size={24} />
+            </div>
+          </div>
+        </div>
+
         {/* Global Search Bar */}
         <div className="max-w-2xl mx-auto w-full relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 size-6" />

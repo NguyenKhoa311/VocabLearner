@@ -22,6 +22,7 @@ export interface WordData {
   repetition?: number;
   easeFactor?: number;
   nextReviewDate?: number;
+  isMastered?: boolean;
 }
 
 interface WordContextType {
