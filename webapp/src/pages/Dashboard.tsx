@@ -726,6 +726,18 @@ Return a JSON object strictly following this structure (do not include markdown 
                             className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
                           />
                         </div>
+                        <div className="flex items-center gap-2 mt-4 p-3 bg-green-50 dark:bg-green-500/10 rounded-xl border border-green-200 dark:border-green-500/20">
+                          <input 
+                            type="checkbox"
+                            id="isMastered"
+                            checked={editFormData.isMastered || false}
+                            onChange={e => setEditFormData({...editFormData, isMastered: e.target.checked})}
+                            className="w-5 h-5 accent-green-500 cursor-pointer"
+                          />
+                          <label htmlFor="isMastered" className="font-bold text-green-700 dark:text-green-400 cursor-pointer select-none">
+                            Đã thành thạo (Không nhắc ôn tập)
+                          </label>
+                        </div>
                         <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-slate-100 dark:border-[#2d3248]">
                           <button onClick={() => setIsEditingWord(false)} disabled={savingEdit} className="px-4 py-2 rounded-xl font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-[#151822] transition-colors">
                             Hủy
