@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { doc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, writeBatch, collection, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Clock, Loader2, Volume2, Folder, ArrowLeft, Edit2, Trash2, CheckSquare, Square, Search, ChevronLeft, ChevronRight, X, Lightbulb, AlertTriangle } from 'lucide-react';
 import { useWords, type WordData } from '../context/WordContext';
@@ -30,6 +30,7 @@ export default function Dashboard() {
   // Search & Pagination state
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [lookingUp, setLookingUp] = useState(false);
   const ITEMS_PER_PAGE = 12;
 
   const PREDEFINED_TOPICS = [
@@ -124,6 +125,168 @@ export default function Dashboard() {
     } catch (e) {
       console.error("Lỗi khi lưu thông tin:", e);
       alert("Lỗi khi lưu thông tin chỉnh sửa");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleLookupNewWord = async () => {
+    const word = searchQuery.trim();
+    if (!word) return;
+    setLookingUp(true);
+    try {
+      // 1. Fast Dictionary API + Translate API
+      let fastResult = null;
+      try {
+        const [dictRes, transRes] = await Promise.all([
+          fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`).then(r => r.ok ? r.json() : null),
+          fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=${encodeURIComponent(word)}`).then(r => r.ok ? r.json() : null)
+        ]);
+
+        if (dictRes && dictRes[0] && transRes && transRes[0] && transRes[0][0]) {
+          const entry = dictRes[0];
+          const meaningEn = entry.meanings[0]?.definitions[0]?.definition || "";
+          const meaningVi = transRes[0][0][0] || "";
+          const phonetic = entry.phonetics?.find((p: any) => p.text)?.text || entry.phonetic || "";
+          const pos = entry.meanings[0]?.partOfSpeech || "";
+          const example = entry.meanings[0]?.definitions[0]?.example || "";
+          
+          fastResult = {
+            id: 'temp-' + Date.now(),
+            word: entry.word || word,
+            phonetic: phonetic,
+            part_of_speech: pos,
+            short_meaning_vi: meaningVi.substring(0, 50),
+            definition: meaningEn ? `${meaningEn} / ${meaningVi}` : meaningVi,
+            topic: "Uncategorized",
+            example: example,
+            example_translation_vi: "",
+            forms: [],
+            collocations: [],
+            type: "word",
+            isMastered: false,
+            srsLevel: 0,
+            isUnsaved: true
+          };
+        }
+      } catch (e) {
+        console.warn("Fast dictionary failed", e);
+      }
+
+      if (fastResult) {
+        setViewingWord(fastResult as any);
+        return;
+      }
+
+      // 2. Fallback to Gemini API
+      const GEMINI_API_KEY_STRING = import.meta.env.VITE_GEMINI_API_KEYS || "";
+      const GEMINI_API_KEYS = GEMINI_API_KEY_STRING
+        .replace(/["']/g, '')
+        .split(',')
+        .map((k: string) => k.trim())
+        .filter((k: string) => k);
+
+      if (GEMINI_API_KEYS.length === 0) {
+        throw new Error("NO_API_KEYS");
+      }
+
+      const prompt = `You are a vocabulary helper. Analyze the word/phrase: "${word}". 
+Return a JSON object strictly following this structure (do not include markdown wrapping, just the JSON string):
+{
+  "word": "${word}",
+  "phonetic": "IPA phonetic transcription (e.g. /kæt/)",
+  "part_of_speech": "The part of speech in Vietnamese (e.g. Danh từ, Động từ, Tính từ)",
+  "short_meaning_vi": "Short Vietnamese translation (1-3 words max)",
+  "definition_en": "Clear and concise definition in English.",
+  "definition_vi": "Nghĩa tiếng Việt đầy đủ và chính xác.",
+  "topic": "Classify the word strictly into ONE of these exactly: Technology, Health & Science, Business & Economy, Education, Environment & Nature, Daily Life, Emotions & Psychology, Entertainment & Art, Travel & Culture, Sports",
+  "forms": ["noun: ...", "verb: ...", "adjective: ..."],
+  "example": "A realistic example sentence in English.",
+  "example_translation_vi": "Bản dịch tiếng Việt của câu ví dụ",
+  "collocations": ["collocation 1", "collocation 2"]
+}`;
+      const GOOGLE_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.5-pro"];
+      let res;
+      let success = false;
+      for (const key of GEMINI_API_KEYS) {
+        for (const model of GOOGLE_MODELS) {
+          res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          });
+          if (res.ok) {
+            success = true;
+            break;
+          }
+          if (res.status === 429) continue;
+        }
+        if (success) break;
+      }
+      
+      if (!success || !res || !res.ok) {
+        throw new Error("API_FAILED");
+      }
+      const data = await res.json();
+      let textResult = data.candidates[0].content.parts[0].text;
+      
+      const jsonMatch = textResult.match(/\{[\s\S]*\}/);
+      if (jsonMatch) textResult = jsonMatch[0];
+      else textResult = textResult.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
+      
+      const aiData = JSON.parse(textResult);
+      
+      const newWord = {
+        id: 'temp-' + Date.now(),
+        word: aiData.word || word,
+        phonetic: aiData.phonetic || "",
+        part_of_speech: aiData.part_of_speech || "",
+        short_meaning_vi: aiData.short_meaning_vi || "",
+        definition: `${aiData.definition_en} / ${aiData.definition_vi}`,
+        topic: aiData.topic || "Uncategorized",
+        forms: aiData.forms || [],
+        example: aiData.example || "",
+        example_translation_vi: aiData.example_translation_vi || "",
+        collocations: aiData.collocations || [],
+        type: "word",
+        isMastered: false,
+        srsLevel: 0,
+        isUnsaved: true
+      };
+      
+      setViewingWord(newWord as any);
+      
+    } catch (e: any) {
+      console.error("Lookup error:", e);
+      if (e.message === "NO_API_KEYS") {
+        alert("Chưa cấu hình API Key trên Github (thiếu VITE_GEMINI_API_KEYS).");
+      } else {
+        alert("Có lỗi xảy ra khi tra từ trực tuyến. Vui lòng thử lại sau.");
+      }
+    } finally {
+      setLookingUp(false);
+    }
+  };
+
+  const handleSaveNewWord = async () => {
+    if (!viewingWord || !(viewingWord as any).isUnsaved) return;
+    setSavingEdit(true);
+    try {
+      const { id, isUnsaved, ...dataToSave } = viewingWord as any;
+      const firestoreData = {
+        ...dataToSave,
+        createdAt: new Date().toISOString(),
+        nextReviewDate: new Date().toISOString(),
+      };
+      
+      await addDoc(collection(db, 'words'), firestoreData);
+      
+      alert("Đã lưu từ vựng!");
+      setViewingWord(null);
+      setSearchQuery("");
+    } catch (e) {
+      console.error("Lỗi khi lưu từ mới:", e);
+      alert("Lỗi khi lưu từ mới");
     } finally {
       setSavingEdit(false);
     }
@@ -328,8 +491,22 @@ Return a JSON object strictly following this structure (do not include markdown 
             placeholder="Tìm kiếm từ vựng trên toàn bộ các chủ đề..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white dark:bg-[#1e2235] text-slate-800 dark:text-white border-2 border-slate-200 dark:border-[#2d3248] rounded-2xl pl-12 pr-4 py-4 text-lg focus:outline-none focus:border-blue-500 transition-colors shadow-sm"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && searchQuery.trim().length > 0) {
+                handleLookupNewWord();
+              }
+            }}
+            className="w-full bg-white dark:bg-[#1e2235] text-slate-800 dark:text-white border-2 border-slate-200 dark:border-[#2d3248] rounded-2xl pl-12 pr-32 py-4 text-lg focus:outline-none focus:border-blue-500 transition-colors shadow-sm"
           />
+          {searchQuery.trim().length > 0 && (
+            <button 
+              onClick={handleLookupNewWord}
+              disabled={lookingUp}
+              className="absolute right-3 top-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-xl transition-colors disabled:opacity-50"
+            >
+              {lookingUp ? 'Đang tra...' : 'Tra trực tuyến'}
+            </button>
+          )}
         </div>
 
       <motion.div 
@@ -398,11 +575,25 @@ Return a JSON object strictly following this structure (do not include markdown 
             <input 
               autoFocus={!selectedTopic}
               type="text"
-              placeholder="Tìm kiếm từ vựng..."
+              placeholder="Tìm kiếm hoặc nhập từ mới để tra cứu..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-white dark:bg-[#1e2235] border border-slate-200 dark:border-[#2d3248] rounded-xl text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchQuery.trim().length > 0) {
+                  handleLookupNewWord();
+                }
+              }}
+              className="w-full pl-10 pr-28 py-2 bg-white dark:bg-[#1e2235] border border-slate-200 dark:border-[#2d3248] rounded-xl text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
             />
+            {searchQuery.trim().length > 0 && (
+              <button 
+                onClick={handleLookupNewWord}
+                disabled={lookingUp}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1.5 px-3 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {lookingUp ? 'Đang tra...' : 'Tra trực tuyến'}
+              </button>
+            )}
           </div>
 
           <button
@@ -416,7 +607,17 @@ Return a JSON object strictly following this structure (do not include markdown 
         
         {topicWords.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center text-slate-500">
-            <p>Không tìm thấy từ vựng nào.</p>
+            <p className="mb-4">Không tìm thấy từ vựng nào.</p>
+            {searchQuery.trim().length > 0 && (
+              <button 
+                onClick={handleLookupNewWord}
+                disabled={lookingUp}
+                className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-sm transition-colors disabled:opacity-50"
+              >
+                {lookingUp ? <Loader2 className="animate-spin" size={20} /> : <Search size={20} />}
+                Tra cứu từ mới trực tuyến: "{searchQuery}"
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -625,20 +826,30 @@ Return a JSON object strictly following this structure (do not include markdown 
                         )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        {!isEditingWord && (
-                          <>
-                            <button 
-                              onClick={handleRefreshAI} 
-                              disabled={refreshingAI}
-                              title="Làm mới AI Insights (Lấy lại dữ liệu chuyên sâu)"
-                              className={`p-2 rounded-full transition-colors ${refreshingAI ? 'text-teal-400 bg-teal-50 dark:bg-teal-900/10 animate-pulse' : 'text-teal-600 hover:text-teal-700 hover:bg-teal-100 bg-teal-50 dark:text-teal-400 dark:bg-teal-900/20 dark:hover:bg-teal-900/40'}`}
-                            >
-                              <Lightbulb size={20} className={refreshingAI ? "animate-spin" : ""} />
-                            </button>
-                            <button onClick={handleEditWord} title="Chỉnh sửa từ vựng" className="p-2 text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 rounded-full transition-colors">
-                              <Edit2 size={20} />
-                            </button>
-                          </>
+                        {(viewingWord as any).isUnsaved ? (
+                          <button 
+                            onClick={handleSaveNewWord} 
+                            disabled={savingEdit}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-bold transition-colors text-sm shadow-sm flex items-center gap-2 disabled:opacity-50"
+                          >
+                            {savingEdit ? 'Đang lưu...' : 'Lưu từ này'}
+                          </button>
+                        ) : (
+                          !isEditingWord && (
+                            <>
+                              <button 
+                                onClick={handleRefreshAI} 
+                                disabled={refreshingAI}
+                                title="Làm mới AI Insights (Lấy lại dữ liệu chuyên sâu)"
+                                className={`p-2 rounded-full transition-colors ${refreshingAI ? 'text-teal-400 bg-teal-50 dark:bg-teal-900/10 animate-pulse' : 'text-teal-600 hover:text-teal-700 hover:bg-teal-100 bg-teal-50 dark:text-teal-400 dark:bg-teal-900/20 dark:hover:bg-teal-900/40'}`}
+                              >
+                                <Lightbulb size={20} className={refreshingAI ? "animate-spin" : ""} />
+                              </button>
+                              <button onClick={handleEditWord} title="Chỉnh sửa từ vựng" className="p-2 text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 rounded-full transition-colors">
+                                <Edit2 size={20} />
+                              </button>
+                            </>
+                          )
                         )}
                         <button onClick={() => { setViewingWord(null); setIsEditingWord(false); }} title="Đóng (Esc)" className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-[#2d3248] dark:hover:bg-[#3f4561] rounded-full transition-colors">
                           <X size={20} />

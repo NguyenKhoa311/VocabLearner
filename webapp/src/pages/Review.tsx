@@ -22,6 +22,7 @@ export default function Review() {
   const [hintLevel, setHintLevel] = useState(0);
   const [previewTopic, setPreviewTopic] = useState<string | null>(null);
   const [isWrongShake, setIsWrongShake] = useState(false);
+  const [isCorrectlyGuessed, setIsCorrectlyGuessed] = useState(false);
 
 
 
@@ -33,6 +34,7 @@ export default function Review() {
     setCurrentIndex(0);
     setSessionComplete(false);
     setIsRevealed(false);
+    setIsCorrectlyGuessed(false);
     setInputValue('');
     setHintLevel(0);
   };
@@ -44,6 +46,7 @@ export default function Review() {
     setCurrentIndex(0);
     setSessionComplete(false);
     setIsRevealed(false);
+    setIsCorrectlyGuessed(false);
     setInputValue('');
     setHintLevel(0);
     setPreviewTopic(null);
@@ -55,10 +58,38 @@ export default function Review() {
     window.speechSynthesis.speak(utterance);
   };
 
+  const playSuccessSound = () => {
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1046.50, ctx.currentTime); // C6
+      osc.frequency.setValueAtTime(1318.51, ctx.currentTime + 0.1); // E6
+      
+      gainNode.gain.setValueAtTime(0, ctx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.05);
+      gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
+      
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      osc.start();
+      osc.stop(ctx.currentTime + 0.2);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleCheckAnswer = () => {
     const currentWord = studyList[currentIndex].word.toLowerCase();
     if (inputValue.toLowerCase().trim() === currentWord) {
+      setIsCorrectlyGuessed(true);
       setIsRevealed(true);
+      playSuccessSound();
       playAudio(studyList[currentIndex].word);
     } else {
       setIsWrongShake(true);
@@ -121,6 +152,7 @@ export default function Review() {
 
   const moveToNextWord = () => {
     setIsRevealed(false);
+    setIsCorrectlyGuessed(false);
     setInputValue('');
     setHintLevel(0);
     
@@ -386,7 +418,7 @@ export default function Review() {
       {/* Main Card with AnimatePresence for transitions */}
       <AnimatePresence mode="wait">
         <motion.div 
-          key={word.id + isRevealed} // Force re-render/animation on word change OR reveal state change
+          key={word.id} // Only force re-render/animation on word change
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
@@ -519,13 +551,17 @@ export default function Review() {
           ) : (
             <motion.div 
               initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", bounce: 0.5 }}
+              animate={isCorrectlyGuessed ? { scale: [0.8, 1.1, 1], opacity: 1 } : { scale: 1, opacity: 1 }}
+              transition={{ duration: 0.4, type: "spring", bounce: 0.5 }}
               className="w-full max-w-lg flex flex-col items-center"
             >
-              <div className="w-full border border-green-500 bg-green-500/10 rounded-xl px-4 py-4 text-center text-2xl text-green-500 font-bold mb-8 shadow-sm">
+              <motion.div 
+                animate={isCorrectlyGuessed ? { boxShadow: ['0px 0px 0px rgba(34,197,94,0)', '0px 0px 20px rgba(34,197,94,0.6)', '0px 0px 0px rgba(34,197,94,0)'] } : {}}
+                transition={{ duration: 0.6 }}
+                className={`w-full border rounded-xl px-4 py-4 text-center text-2xl font-bold mb-8 shadow-sm ${isCorrectlyGuessed ? 'border-green-500 bg-green-500/10 text-green-500' : 'border-blue-500 bg-blue-500/10 text-blue-500'}`}
+              >
                 {word.word}
-              </div>
+              </motion.div>
             </motion.div>
           )}
         </div>
