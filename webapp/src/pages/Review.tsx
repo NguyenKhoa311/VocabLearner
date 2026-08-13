@@ -317,11 +317,16 @@ export default function Review() {
   const regex = new RegExp(word.word, 'gi');
   const maskedExample = word.example ? word.example.replace(regex, '*'.repeat(word.word.length)) : '';
 
-  const maxLetterHints = Math.max(1, Math.floor(word.word.length / 2));
+  const nonSpaceLength = word.word.replace(/\s/g, '').length;
+  const maxLetterHints = Math.max(1, Math.floor(nonSpaceLength / 2));
   
   const handleHint = () => {
     if (hintLevel <= maxLetterHints) {
-      setHintLevel(prev => prev + 1);
+      const newLevel = hintLevel + 1;
+      setHintLevel(newLevel);
+      if (newLevel > maxLetterHints) {
+        playAudio(word.word);
+      }
     }
   };
 
@@ -330,18 +335,25 @@ export default function Review() {
     const lettersToShow = Math.min(hintLevel, maxLetterHints);
     
     let revealed = new Set<number>();
-    if (lettersToShow >= 1) revealed.add(0);
-    if (lettersToShow >= 2 && w.length > 1) revealed.add(w.length - 1);
+    const nonSpaceIndices = [];
+    for (let i = 0; i < w.length; i++) {
+      if (w[i] !== ' ') {
+        nonSpaceIndices.push(i);
+      }
+    }
+
+    if (lettersToShow >= 1 && nonSpaceIndices.length > 0) revealed.add(nonSpaceIndices[0]);
+    if (lettersToShow >= 2 && nonSpaceIndices.length > 1) revealed.add(nonSpaceIndices[nonSpaceIndices.length - 1]);
     
     let added = 2;
     let idx = 1;
-    while (added < lettersToShow && idx < w.length - 1) {
-      revealed.add(idx);
+    while (added < lettersToShow && idx < nonSpaceIndices.length - 1) {
+      revealed.add(nonSpaceIndices[idx]);
       added++;
       idx++;
     }
     
-    return w.split('').map((c, i) => revealed.has(i) ? c : '*').join('');
+    return w.split('').map((c, i) => revealed.has(i) || c === ' ' ? c : '*').join('');
   };
 
   return (
@@ -446,7 +458,7 @@ export default function Review() {
             <div className="w-full max-w-lg flex flex-col items-center">
               <div className="flex flex-col items-center gap-4 mb-6">
                 <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <div className="border border-dashed border-slate-300 dark:border-[#3e445b] bg-slate-50 dark:bg-[#1a1d2d] rounded-lg px-8 py-3 text-2xl tracking-widest text-slate-800 dark:text-white font-mono shadow-inner min-w-[120px] text-center">
+                  <div className="border border-dashed border-slate-300 dark:border-[#3e445b] bg-slate-50 dark:bg-[#1a1d2d] rounded-lg px-8 py-3 text-2xl tracking-widest text-slate-800 dark:text-white font-mono shadow-inner min-w-[120px] text-center whitespace-pre-wrap">
                     {getHintDisplay()}
                   </div>
                   <button 
