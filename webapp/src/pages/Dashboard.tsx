@@ -138,8 +138,11 @@ export default function Dashboard() {
       // 1. Fast Dictionary API + Translate API
       let fastResult = null;
       try {
+        const dictUrl = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`;
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(dictUrl)}`;
+        
         const [dictRes, transRes] = await Promise.all([
-          fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`).then(r => r.ok ? r.json() : null),
+          fetch(proxyUrl).then(r => r.ok ? r.json() : null),
           fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=${encodeURIComponent(word)}`).then(r => r.ok ? r.json() : null)
         ]);
 
@@ -210,16 +213,27 @@ Return a JSON object strictly following this structure (do not include markdown 
       let success = false;
       for (const key of GEMINI_API_KEYS) {
         for (const model of GOOGLE_MODELS) {
-          res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-          });
-          if (res.ok) {
-            success = true;
-            break;
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout per request
+          try {
+            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+              success = true;
+              break;
+            }
+            if (res.status === 429) continue;
+          } catch (err) {
+            clearTimeout(timeoutId);
+            console.warn(`Gemini fetch error for model ${model}:`, err);
+            // If the network is completely unreachable (e.g. ERR_TIMED_OUT), aborting the whole loop might be better
+            // but we'll try the next model/key just in case it's an isolated issue.
           }
-          if (res.status === 429) continue;
         }
         if (success) break;
       }
