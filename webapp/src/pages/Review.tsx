@@ -391,7 +391,7 @@ export default function Review() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#11131f] text-slate-200 p-4 sm:p-8 font-sans -m-4 sm:-m-8 rounded-2xl sm:rounded-[2.5rem] border border-[#2d3248]/50 shadow-2xl relative overflow-hidden">
+    <div className="h-fit flex flex-col bg-[#11131f] text-slate-200 p-4 sm:p-8 font-sans -m-4 sm:-m-8 rounded-2xl sm:rounded-[2.5rem] border border-[#2d3248]/50 shadow-2xl relative overflow-hidden">
       {/* Background Glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[800px] h-[400px] sm:h-[800px] bg-blue-500/5 rounded-full blur-[100px] pointer-events-none"></div>
 
