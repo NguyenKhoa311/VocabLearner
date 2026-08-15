@@ -20,7 +20,7 @@ export default function Dashboard() {
   const [selectedWords, setSelectedWords] = useState<string[]>([]);
   const [deleting, setDeleting] = useState(false);
   const [viewingWord, setViewingWord] = useState<WordData | null>(null);
-  
+
   // Edit Word State
   const [isEditingWord, setIsEditingWord] = useState(false);
   const [editFormData, setEditFormData] = useState<Partial<WordData>>({});
@@ -34,8 +34,8 @@ export default function Dashboard() {
   const ITEMS_PER_PAGE = 12;
 
   const PREDEFINED_TOPICS = [
-    "Technology", "Health & Science", "Business & Economy", "Education", 
-    "Environment & Nature", "Daily Life", "Emotions & Psychology", 
+    "Technology", "Health & Science", "Business & Economy", "Education",
+    "Environment & Nature", "Daily Life", "Emotions & Psychology",
     "Entertainment & Art", "Travel & Culture", "Sports", "Uncategorized"
   ];
 
@@ -60,7 +60,7 @@ export default function Dashboard() {
   };
 
   const toggleWordSelection = (id: string) => {
-    setSelectedWords(prev => 
+    setSelectedWords(prev =>
       prev.includes(id) ? prev.filter(w => w !== id) : [...prev, id]
     );
   };
@@ -91,7 +91,7 @@ export default function Dashboard() {
   const handleDeleteSelected = async () => {
     if (selectedWords.length === 0) return;
     if (!window.confirm(`Bạn có chắc chắn muốn xóa ${selectedWords.length} từ đã chọn?`)) return;
-    
+
     setDeleting(true);
     try {
       const batch = writeBatch(db);
@@ -118,7 +118,7 @@ export default function Dashboard() {
     try {
       const wordRef = doc(db, 'words', viewingWord.id);
       await updateDoc(wordRef, editFormData);
-      
+
       const updatedWord = { ...viewingWord, ...editFormData } as WordData;
       setViewingWord(updatedWord);
       setIsEditingWord(false);
@@ -140,7 +140,7 @@ export default function Dashboard() {
       try {
         const dictUrl = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`;
         const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(dictUrl)}`;
-        
+
         const [dictRes, transRes] = await Promise.all([
           fetch(proxyUrl).then(r => r.ok ? r.json() : null),
           fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=${encodeURIComponent(word)}`).then(r => r.ok ? r.json() : null)
@@ -153,7 +153,7 @@ export default function Dashboard() {
           const phonetic = entry.phonetics?.find((p: any) => p.text)?.text || entry.phonetic || "";
           const pos = entry.meanings[0]?.partOfSpeech || "";
           const example = entry.meanings[0]?.definitions[0]?.example || "";
-          
+
           fastResult = {
             id: 'temp-' + Date.now(),
             word: entry.word || word,
@@ -237,19 +237,19 @@ Return a JSON object strictly following this structure (do not include markdown 
         }
         if (success) break;
       }
-      
+
       if (!success || !res || !res.ok) {
         throw new Error("API_FAILED");
       }
       const data = await res.json();
       let textResult = data.candidates[0].content.parts[0].text;
-      
+
       const jsonMatch = textResult.match(/\{[\s\S]*\}/);
       if (jsonMatch) textResult = jsonMatch[0];
       else textResult = textResult.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
-      
+
       const aiData = JSON.parse(textResult);
-      
+
       const newWord = {
         id: 'temp-' + Date.now(),
         word: aiData.word || word,
@@ -267,9 +267,9 @@ Return a JSON object strictly following this structure (do not include markdown 
         srsLevel: 0,
         isUnsaved: true
       };
-      
+
       setViewingWord(newWord as any);
-      
+
     } catch (e: any) {
       console.error("Lookup error:", e);
       if (e.message === "NO_API_KEYS") {
@@ -292,9 +292,9 @@ Return a JSON object strictly following this structure (do not include markdown 
         createdAt: new Date().toISOString(),
         nextReviewDate: new Date().toISOString(),
       };
-      
+
       await addDoc(collection(db, 'words'), firestoreData);
-      
+
       alert("Đã lưu từ vựng!");
       setViewingWord(null);
       setSearchQuery("");
@@ -352,7 +352,7 @@ Return a JSON object strictly following this structure (do not include markdown 
         }
         if (success) break;
       }
-      
+
       if (!success || !res || !res.ok) {
         console.error("Gemini API failed with status:", res?.status, "Available keys:", GEMINI_API_KEYS.length);
         if (res && res.status === 429) throw new Error("429_TOO_MANY_REQUESTS");
@@ -361,16 +361,16 @@ Return a JSON object strictly following this structure (do not include markdown 
       }
       const data = await res.json();
       let textResult = data.candidates[0].content.parts[0].text;
-      
+
       const jsonMatch = textResult.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         textResult = jsonMatch[0];
       } else {
         textResult = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
       }
-      
+
       const aiData = JSON.parse(textResult);
-      
+
       const updatedFields: Partial<WordData> = {
         phonetic: aiData.phonetic || viewingWord.phonetic,
         part_of_speech: aiData.part_of_speech || viewingWord.part_of_speech,
@@ -385,7 +385,7 @@ Return a JSON object strictly following this structure (do not include markdown 
 
       const wordRef = doc(db, 'words', viewingWord.id);
       await updateDoc(wordRef, updatedFields);
-      
+
       const updatedWord = { ...viewingWord, ...updatedFields } as WordData;
       setViewingWord(updatedWord);
     } catch (e: any) {
@@ -414,13 +414,13 @@ Return a JSON object strictly following this structure (do not include markdown 
   }, [words]);
 
   const rawTopicWords = selectedTopic ? (groupedWords[selectedTopic] || []) : words;
-  
+
   const topicWords = useMemo(() => {
     let filtered = rawTopicWords;
     if (searchQuery.trim()) {
       const lowerQ = searchQuery.toLowerCase();
-      filtered = filtered.filter(w => 
-        w.word.toLowerCase().includes(lowerQ) || 
+      filtered = filtered.filter(w =>
+        w.word.toLowerCase().includes(lowerQ) ||
         w.short_meaning_vi?.toLowerCase().includes(lowerQ)
       );
     }
@@ -475,7 +475,7 @@ Return a JSON object strictly following this structure (do not include markdown 
               <CheckSquare size={24} />
             </div>
           </div>
-          
+
           <div className="bg-white dark:bg-[#1e2235] p-5 rounded-2xl border border-slate-200 dark:border-[#2d3248] shadow-sm flex items-center justify-between">
             <div>
               <p className="text-slate-500 dark:text-slate-400 text-sm font-bold mb-1">Cần ôn tập tiếp</p>
@@ -500,7 +500,7 @@ Return a JSON object strictly following this structure (do not include markdown 
         {/* Global Search Bar */}
         <div className="max-w-2xl mx-auto w-full relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 size-6" />
-          <input 
+          <input
             type="text"
             placeholder="Tìm kiếm từ vựng trên toàn bộ các chủ đề..."
             value={searchQuery}
@@ -513,7 +513,7 @@ Return a JSON object strictly following this structure (do not include markdown 
             className="w-full bg-white dark:bg-[#1e2235] text-slate-800 dark:text-white border-2 border-slate-200 dark:border-[#2d3248] rounded-2xl pl-12 pr-32 py-4 text-lg focus:outline-none focus:border-blue-500 transition-colors shadow-sm"
           />
           {searchQuery.trim().length > 0 && (
-            <button 
+            <button
               onClick={handleLookupNewWord}
               disabled={lookingUp}
               className="absolute right-3 top-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-xl transition-colors disabled:opacity-50"
@@ -523,47 +523,47 @@ Return a JSON object strictly following this structure (do not include markdown 
           )}
         </div>
 
-      <motion.div 
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-        initial="hidden"
-        animate="visible"
-        variants={{
-          hidden: { opacity: 0 },
-          visible: {
-            opacity: 1,
-            transition: { staggerChildren: 0.05 }
-          }
-        }}
-      >
-        {Object.entries(groupedWords).map(([topic, topicWords]) => (
-          <motion.div 
-            key={topic} 
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              visible: { opacity: 1, y: 0 }
-            }}
-            onClick={() => setSelectedTopic(topic)}
-            className="bg-white dark:bg-[#1e2235] p-6 rounded-3xl border border-slate-200 dark:border-[#2d3248] shadow-sm hover:shadow-xl transition-all cursor-pointer group relative overflow-hidden"
-          >
-            <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 dark:bg-blue-900/20 rounded-full blur-2xl group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 transition-colors"></div>
-            
-            <div className="flex items-center gap-4 mb-4 relative z-10">
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Folder size={24} />
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: { staggerChildren: 0.05 }
+            }
+          }}
+        >
+          {Object.entries(groupedWords).map(([topic, topicWords]) => (
+            <motion.div
+              key={topic}
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0 }
+              }}
+              onClick={() => setSelectedTopic(topic)}
+              className="bg-white dark:bg-[#1e2235] p-6 rounded-3xl border border-slate-200 dark:border-[#2d3248] shadow-sm hover:shadow-xl transition-all cursor-pointer group relative overflow-hidden"
+            >
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 dark:bg-blue-900/20 rounded-full blur-2xl group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 transition-colors"></div>
+
+              <div className="flex items-center gap-4 mb-4 relative z-10">
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Folder size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">{topic}</h3>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{topicWords.length} thẻ</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">{topic}</h3>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{topicWords.length} thẻ</p>
+
+              <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 pt-4 border-t border-slate-100 dark:border-[#2d3248] relative z-10 font-medium">
+                <span>Xem chi tiết</span>
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity translate-x-2 group-hover:translate-x-0">→</span>
               </div>
-            </div>
-            
-            <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 pt-4 border-t border-slate-100 dark:border-[#2d3248] relative z-10 font-medium">
-              <span>Xem chi tiết</span>
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity translate-x-2 group-hover:translate-x-0">→</span>
-            </div>
-          </motion.div>
-        ))}
-      </motion.div>
+            </motion.div>
+          ))}
+        </motion.div>
       </div>
     );
   };
@@ -572,7 +572,7 @@ Return a JSON object strictly following this structure (do not include markdown 
     return (
       <div className="relative pb-24">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <button 
+          <button
             onClick={() => {
               setSelectedTopic(null);
               setSelectedWords([]);
@@ -586,7 +586,7 @@ Return a JSON object strictly following this structure (do not include markdown 
 
           <div className="flex-1 max-w-md mx-auto w-full relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 size-5" />
-            <input 
+            <input
               autoFocus={!selectedTopic}
               type="text"
               placeholder="Tìm kiếm hoặc nhập từ mới để tra cứu..."
@@ -600,7 +600,7 @@ Return a JSON object strictly following this structure (do not include markdown 
               className="w-full pl-10 pr-28 py-2 bg-white dark:bg-[#1e2235] border border-slate-200 dark:border-[#2d3248] rounded-xl text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
             />
             {searchQuery.trim().length > 0 && (
-              <button 
+              <button
                 onClick={handleLookupNewWord}
                 disabled={lookingUp}
                 className="absolute right-1.5 top-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold py-1.5 px-3 rounded-lg transition-colors disabled:opacity-50"
@@ -618,12 +618,12 @@ Return a JSON object strictly following this structure (do not include markdown 
             {allSelected ? 'Deselect Page' : 'Select Page'}
           </button>
         </div>
-        
+
         {topicWords.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center text-slate-500">
             <p className="mb-4">Không tìm thấy từ vựng nào.</p>
             {searchQuery.trim().length > 0 && (
-              <button 
+              <button
                 onClick={handleLookupNewWord}
                 disabled={lookingUp}
                 className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-sm transition-colors disabled:opacity-50"
@@ -635,7 +635,7 @@ Return a JSON object strictly following this structure (do not include markdown 
           </div>
         ) : (
           <>
-            <motion.div 
+            <motion.div
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
               initial="hidden"
               animate="visible"
@@ -644,414 +644,413 @@ Return a JSON object strictly following this structure (do not include markdown 
                 visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
               }}
             >
-            {paginatedWords.map((w) => {
-              const isSelected = selectedWords.includes(w.id);
-            return (
-            <motion.div 
-              key={w.id} 
-              variants={{
-                hidden: { opacity: 0, y: 20 },
-                visible: { opacity: 1, y: 0 }
-              }}
-              whileHover={{ y: -4 }}
-              onClick={() => setViewingWord(w)}
-              className={`flex flex-col h-full bg-white dark:bg-[#1e2235] p-6 rounded-3xl border shadow-sm hover:shadow-xl transition-all relative overflow-hidden group cursor-pointer ${
-                isSelected ? 'border-blue-500 ring-2 ring-blue-500/20 dark:border-blue-500 dark:ring-blue-500/20' : 'border-slate-200 dark:border-[#2d3248]'
-              }`}
-            >
-              {/* Checkbox */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleWordSelection(w.id);
-                }}
-                className={`absolute top-4 right-4 z-20 p-1.5 rounded-lg transition-all ${
-                  isSelected 
-                    ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/20 opacity-100' 
-                    : 'text-slate-300 dark:text-slate-600 hover:text-blue-500 opacity-0 group-hover:opacity-100'
-                }`}
-              >
-                {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
-              </button>
-
-              <div className="flex flex-col gap-1 pr-8">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-xl font-extrabold text-slate-800 dark:text-white line-clamp-2">{w.word}</h3>
-                  {w.type === 'sentence' ? (
-                    <span className="bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-pink-200 dark:border-pink-500/30 shadow-sm shrink-0">
-                      Sentence
-                    </span>
-                  ) : w.type === 'collocation' ? (
-                    <span className="bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-teal-200 dark:border-teal-500/30 shadow-sm shrink-0">
-                      Collocation
-                    </span>
-                  ) : w.part_of_speech ? (
-                    <span className="bg-[#e0e7ff] dark:bg-blue-900/30 text-[#3730a3] dark:text-blue-300 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-[#c7d2fe] dark:border-blue-500/30 shadow-sm shrink-0">
-                      {w.part_of_speech}
-                    </span>
-                  ) : null}
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      playAudio(w.word);
+              {paginatedWords.map((w) => {
+                const isSelected = selectedWords.includes(w.id);
+                return (
+                  <motion.div
+                    key={w.id}
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      visible: { opacity: 1, y: 0 }
                     }}
-                    className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors focus:outline-none p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-blue-500/10 ml-auto"
-                    title="Listen to pronunciation"
+                    whileHover={{ y: -4 }}
+                    onClick={() => setViewingWord(w)}
+                    className={`flex flex-col h-full bg-white dark:bg-[#1e2235] p-6 rounded-3xl border shadow-sm hover:shadow-xl transition-all relative overflow-hidden group cursor-pointer ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/20 dark:border-blue-500 dark:ring-blue-500/20' : 'border-slate-200 dark:border-[#2d3248]'
+                      }`}
                   >
-                    <Volume2 size={18} />
-                  </button>
-                </div>
-                <div className="flex items-center gap-3">
-                  {w.phonetic && <span className="text-sm font-medium text-slate-400 dark:text-slate-500">{w.phonetic}</span>}
-                  {w.short_meaning_vi && <span className="text-[15px] font-bold text-blue-600 dark:text-blue-400">{w.short_meaning_vi}</span>}
-                </div>
-              </div>
-              
-              <div className="mt-5 space-y-3">
-                <div className="space-y-1 bg-slate-50 dark:bg-[#151822] p-4 rounded-2xl">
-                  {(() => {
-                    const parts = w.definition.split(' / ');
-                    if (parts.length >= 2) {
-                      return (
-                        <>
-                          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 line-clamp-2">{parts[0]}</p>
-                          <p className="text-sm text-slate-500 dark:text-slate-500 line-clamp-2 mt-1">{parts.slice(1).join(' / ')}</p>
-                        </>
-                      );
-                    }
-                    return <p className="text-sm font-medium text-slate-700 dark:text-slate-300 line-clamp-2">{w.definition}</p>;
-                  })()}
-                </div>
-                
-                {w.example && (
-                  <div className="px-1">
-                    <p className="text-sm text-slate-600 dark:text-slate-400 italic line-clamp-2">"{w.example}"</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-auto pt-5 border-t border-slate-100 dark:border-[#2d3248] flex items-center justify-between text-xs font-bold tracking-wide">
-                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border ${getSrsBadge(w.srsLevel).color}`}>
-                  <Clock size={12} />
-                  <span>{getSrsBadge(w.srsLevel).text}</span>
-                </div>
-                
-                <div className="relative flex items-center gap-2">
-                  <button 
-                    onClick={(e) => handleDeleteSingle(w.id, e)}
-                    disabled={deleting}
-                    className="flex items-center justify-center p-1.5 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                    title="Xóa từ vựng"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-
-                  {editingTopicId === w.id ? (
-                    <select
-                      autoFocus
-                      disabled={updating}
-                      value={w.topic || "Uncategorized"}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => updateWordTopic(w.id, e.target.value)}
-                      onBlur={() => setEditingTopicId(null)}
-                      className="text-xs bg-slate-50 dark:bg-[#151822] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#2d3248] rounded-lg px-2 py-1 outline-none focus:border-blue-500 cursor-pointer shadow-sm appearance-none pr-6"
-                    >
-                      {PREDEFINED_TOPICS.map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <button 
+                    {/* Checkbox */}
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setEditingTopicId(w.id);
+                        toggleWordSelection(w.id);
                       }}
-                      className="flex items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors bg-slate-50 hover:bg-blue-50 dark:bg-[#151822] dark:hover:bg-blue-500/10 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-[#2d3248] hover:border-blue-200 dark:hover:border-blue-500/30"
+                      className={`absolute top-4 right-4 z-20 p-1.5 rounded-lg transition-all ${isSelected
+                        ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/20 opacity-100'
+                        : 'text-slate-300 dark:text-slate-600 hover:text-blue-500 opacity-0 group-hover:opacity-100'
+                        }`}
                     >
-                      <span className="truncate max-w-[100px] font-medium">{w.topic || "Uncategorized"}</span>
-                      <Edit2 size={12} />
+                      {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
                     </button>
-                  )}
-                </div>
-              </div>
+
+                    <div className="flex flex-col gap-1 pr-8">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-xl font-extrabold text-slate-800 dark:text-white line-clamp-2">{w.word}</h3>
+                        {w.type === 'sentence' ? (
+                          <span className="bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-pink-200 dark:border-pink-500/30 shadow-sm shrink-0">
+                            Sentence
+                          </span>
+                        ) : w.type === 'collocation' ? (
+                          <span className="bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-teal-200 dark:border-teal-500/30 shadow-sm shrink-0">
+                            Collocation
+                          </span>
+                        ) : w.part_of_speech ? (
+                          <span className="bg-[#e0e7ff] dark:bg-blue-900/30 text-[#3730a3] dark:text-blue-300 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-[#c7d2fe] dark:border-blue-500/30 shadow-sm shrink-0">
+                            {w.part_of_speech}
+                          </span>
+                        ) : null}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            playAudio(w.word);
+                          }}
+                          className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors focus:outline-none p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-blue-500/10 ml-auto"
+                          title="Listen to pronunciation"
+                        >
+                          <Volume2 size={18} />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {w.phonetic && <span className="text-sm font-medium text-slate-400 dark:text-slate-500">{w.phonetic}</span>}
+                        {w.short_meaning_vi && <span className="text-[15px] font-bold text-blue-600 dark:text-blue-400">{w.short_meaning_vi}</span>}
+                      </div>
+                    </div>
+
+                    <div className="mt-5 space-y-3">
+                      <div className="space-y-1 bg-slate-50 dark:bg-[#151822] p-4 rounded-2xl">
+                        {(() => {
+                          const parts = w.definition.split(' / ');
+                          if (parts.length >= 2) {
+                            return (
+                              <>
+                                <p className="text-sm font-medium text-slate-700 dark:text-slate-300 line-clamp-2">{parts[0]}</p>
+                                <p className="text-sm text-slate-500 dark:text-slate-500 line-clamp-2 mt-1">{parts.slice(1).join(' / ')}</p>
+                              </>
+                            );
+                          }
+                          return <p className="text-sm font-medium text-slate-700 dark:text-slate-300 line-clamp-2">{w.definition}</p>;
+                        })()}
+                      </div>
+
+                      {w.example && (
+                        <div className="px-1">
+                          <p className="text-sm text-slate-600 dark:text-slate-400 italic line-clamp-2">"{w.example}"</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-auto pt-5 border-t border-slate-100 dark:border-[#2d3248] flex items-center justify-between text-xs font-bold tracking-wide">
+                      <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border ${getSrsBadge(w.srsLevel).color}`}>
+                        <Clock size={12} />
+                        <span>{getSrsBadge(w.srsLevel).text}</span>
+                      </div>
+
+                      <div className="relative flex items-center gap-2">
+                        <button
+                          onClick={(e) => handleDeleteSingle(w.id, e)}
+                          disabled={deleting}
+                          className="flex items-center justify-center p-1.5 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                          title="Xóa từ vựng"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+
+                        {editingTopicId === w.id ? (
+                          <select
+                            autoFocus
+                            disabled={updating}
+                            value={w.topic || "Uncategorized"}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => updateWordTopic(w.id, e.target.value)}
+                            onBlur={() => setEditingTopicId(null)}
+                            className="text-xs bg-slate-50 dark:bg-[#151822] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#2d3248] rounded-lg px-2 py-1 outline-none focus:border-blue-500 cursor-pointer shadow-sm appearance-none pr-6"
+                          >
+                            {PREDEFINED_TOPICS.map(t => (
+                              <option key={t} value={t}>{t}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingTopicId(w.id);
+                            }}
+                            className="flex items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors bg-slate-50 hover:bg-blue-50 dark:bg-[#151822] dark:hover:bg-blue-500/10 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-[#2d3248] hover:border-blue-200 dark:hover:border-blue-500/30"
+                          >
+                            <span className="truncate max-w-[100px] font-medium">{w.topic || "Uncategorized"}</span>
+                            <Edit2 size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )
+              })}
             </motion.div>
-            )})}
-      </motion.div>
 
             {/* Modal for viewing full word details */}
             <AnimatePresence>
-            {viewingWord && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md" 
-                onClick={() => setViewingWord(null)}
-              >
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                  transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                  className="bg-white/95 dark:bg-[#1e2235]/95 backdrop-blur-2xl rounded-3xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto border border-white/20 dark:border-white/10"
-                  onClick={e => e.stopPropagation()}
+              {viewingWord && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-md"
+                  onClick={() => setViewingWord(null)}
                 >
-                  <div className="p-6">
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="flex flex-col gap-2 pr-8">
-                        {/* Line 1: Word + Tags */}
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white break-words">{viewingWord.word}</h3>
-                          
-                          <div className="flex items-center gap-2 shrink-0">
-                            {viewingWord.part_of_speech && (
-                              <span className="whitespace-nowrap bg-[#e0e7ff] dark:bg-blue-900/30 text-[#3730a3] dark:text-blue-300 px-2 py-0.5 rounded-lg text-xs font-bold border border-[#c7d2fe] dark:border-blue-500/30 shadow-sm">
-                                {viewingWord.part_of_speech}
-                              </span>
-                            )}
-                            <span className={`whitespace-nowrap px-2 py-0.5 rounded-lg text-xs font-bold border shadow-sm ${getSrsBadge(viewingWord.srsLevel).color}`}>
-                              {getSrsBadge(viewingWord.srsLevel).text}
-                            </span>
-                          </div>
-                        </div>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                    className="bg-white/95 dark:bg-[#1e2235]/95 backdrop-blur-2xl rounded-3xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto border border-white/20 dark:border-white/10"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <div className="p-6">
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="flex flex-col gap-2 pr-8">
+                          {/* Line 1: Word + Tags */}
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white break-words">{viewingWord.word}</h3>
 
-                        {/* Line 2: Phonetic + Speaker */}
-                        {(viewingWord.phonetic || viewingWord.word) && (
-                          <div className="flex items-center gap-2">
-                            {viewingWord.phonetic && <span className="text-base font-medium text-slate-400 dark:text-slate-500">{viewingWord.phonetic}</span>}
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                playAudio(viewingWord.word);
-                              }}
-                              className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors focus:outline-none p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-blue-500/10 shrink-0"
-                              title="Nghe phát âm"
+                            <div className="flex items-center gap-2 shrink-0">
+                              {viewingWord.part_of_speech && (
+                                <span className="whitespace-nowrap bg-[#e0e7ff] dark:bg-blue-900/30 text-[#3730a3] dark:text-blue-300 px-2 py-0.5 rounded-lg text-xs font-bold border border-[#c7d2fe] dark:border-blue-500/30 shadow-sm">
+                                  {viewingWord.part_of_speech}
+                                </span>
+                              )}
+                              <span className={`whitespace-nowrap px-2 py-0.5 rounded-lg text-xs font-bold border shadow-sm ${getSrsBadge(viewingWord.srsLevel).color}`}>
+                                {getSrsBadge(viewingWord.srsLevel).text}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Line 2: Phonetic + Speaker */}
+                          {(viewingWord.phonetic || viewingWord.word) && (
+                            <div className="flex items-center gap-2">
+                              {viewingWord.phonetic && <span className="text-base font-medium text-slate-400 dark:text-slate-500">{viewingWord.phonetic}</span>}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  playAudio(viewingWord.word);
+                                }}
+                                className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors focus:outline-none p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-blue-500/10 shrink-0"
+                                title="Nghe phát âm"
+                              >
+                                <Volume2 size={20} />
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Line 3: Meaning */}
+                          {viewingWord.short_meaning_vi && (
+                            <div className="mt-1">
+                              <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{viewingWord.short_meaning_vi}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {(viewingWord as any).isUnsaved ? (
+                            <button
+                              onClick={handleSaveNewWord}
+                              disabled={savingEdit}
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-bold transition-colors text-sm shadow-sm flex items-center gap-2 disabled:opacity-50"
                             >
-                              <Volume2 size={20} />
+                              {savingEdit ? 'Đang lưu...' : 'Lưu từ này'}
+                            </button>
+                          ) : (
+                            !isEditingWord && (
+                              <>
+                                <button
+                                  onClick={handleRefreshAI}
+                                  disabled={refreshingAI}
+                                  title="Làm mới AI Insights (Lấy lại dữ liệu chuyên sâu)"
+                                  className={`p-2 rounded-full transition-colors ${refreshingAI ? 'text-teal-400 bg-teal-50 dark:bg-teal-900/10 animate-pulse' : 'text-teal-600 hover:text-teal-700 hover:bg-teal-100 bg-teal-50 dark:text-teal-400 dark:bg-teal-900/20 dark:hover:bg-teal-900/40'}`}
+                                >
+                                  <Lightbulb size={20} className={refreshingAI ? "animate-spin" : ""} />
+                                </button>
+                                <button onClick={handleEditWord} title="Chỉnh sửa từ vựng" className="p-2 text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 rounded-full transition-colors">
+                                  <Edit2 size={20} />
+                                </button>
+                              </>
+                            )
+                          )}
+                          <button onClick={() => { setViewingWord(null); setIsEditingWord(false); }} title="Đóng (Esc)" className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-[#2d3248] dark:hover:bg-[#3f4561] rounded-full transition-colors">
+                            <X size={20} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {isEditingWord ? (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Từ vựng</label>
+                            <input
+                              value={editFormData.word || ''}
+                              onChange={e => setEditFormData({ ...editFormData, word: e.target.value })}
+                              className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
+                            />
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="flex-1">
+                              <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Loại từ</label>
+                              <input
+                                value={editFormData.part_of_speech || ''}
+                                onChange={e => setEditFormData({ ...editFormData, part_of_speech: e.target.value })}
+                                className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
+                                placeholder="Noun, Verb..."
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Phát âm</label>
+                              <input
+                                value={editFormData.phonetic || ''}
+                                onChange={e => setEditFormData({ ...editFormData, phonetic: e.target.value })}
+                                className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Nghĩa ngắn gọn</label>
+                            <input
+                              value={editFormData.short_meaning_vi || ''}
+                              onChange={e => setEditFormData({ ...editFormData, short_meaning_vi: e.target.value })}
+                              className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Định nghĩa chi tiết</label>
+                            <textarea
+                              rows={3}
+                              value={editFormData.definition || ''}
+                              onChange={e => setEditFormData({ ...editFormData, definition: e.target.value })}
+                              className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Ví dụ</label>
+                            <textarea
+                              rows={2}
+                              value={editFormData.example || ''}
+                              onChange={e => setEditFormData({ ...editFormData, example: e.target.value })}
+                              className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Dịch nghĩa Ví dụ</label>
+                            <textarea
+                              rows={2}
+                              value={editFormData.example_translation_vi || ''}
+                              onChange={e => setEditFormData({ ...editFormData, example_translation_vi: e.target.value })}
+                              className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Từ loại liên quan (cách nhau bởi dấu phẩy)</label>
+                            <input
+                              value={editFormData.forms?.join(', ') || ''}
+                              onChange={e => setEditFormData({ ...editFormData, forms: e.target.value.split(',').map(s => s.trim()) })}
+                              className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Collocations (cách nhau bởi dấu phẩy)</label>
+                            <input
+                              value={editFormData.collocations?.join(', ') || ''}
+                              onChange={e => setEditFormData({ ...editFormData, collocations: e.target.value.split(',').map(s => s.trim()) })}
+                              className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 mt-4 p-3 bg-green-50 dark:bg-green-500/10 rounded-xl border border-green-200 dark:border-green-500/20">
+                            <input
+                              type="checkbox"
+                              id="isMastered"
+                              checked={editFormData.isMastered || false}
+                              onChange={e => setEditFormData({ ...editFormData, isMastered: e.target.checked })}
+                              className="w-5 h-5 accent-green-500 cursor-pointer"
+                            />
+                            <label htmlFor="isMastered" className="font-bold text-green-700 dark:text-green-400 cursor-pointer select-none">
+                              Đã thành thạo (Không nhắc ôn tập)
+                            </label>
+                          </div>
+                          <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-slate-100 dark:border-[#2d3248]">
+                            <button onClick={() => setIsEditingWord(false)} disabled={savingEdit} className="px-4 py-2 rounded-xl font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-[#151822] transition-colors">
+                              Hủy
+                            </button>
+                            <button onClick={handleSaveEdit} disabled={savingEdit} className="px-6 py-2 rounded-xl font-bold bg-blue-500 text-white hover:bg-blue-600 transition-colors shadow-sm disabled:opacity-50">
+                              {savingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
                             </button>
                           </div>
-                        )}
+                        </div>
+                      ) : (
+                        <div className="space-y-6">
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Definition</h4>
+                            <div className="bg-slate-50 dark:bg-[#151822] p-4 rounded-2xl border border-slate-100 dark:border-[#2d3248]">
+                              {(() => {
+                                const formatText = (text: string) => {
+                                  if (!text) return "";
+                                  // Insert newline before numbers (e.g. " 1. ", " 2. ")
+                                  let formatted = text.replace(/(?<!^)\s+(?=\d+\.)/g, '\n');
+                                  // Insert newline before bullets (e.g. " - ")
+                                  formatted = formatted.replace(/(?<!^)\s+(?=-\s)/g, '\n');
+                                  return formatted;
+                                };
 
-                        {/* Line 3: Meaning */}
-                        {viewingWord.short_meaning_vi && (
-                          <div className="mt-1">
-                            <span className="text-xl font-bold text-blue-600 dark:text-blue-400">{viewingWord.short_meaning_vi}</span>
+                                const parts = viewingWord.definition.split(' / ');
+                                if (parts.length >= 2) {
+                                  return (
+                                    <>
+                                      <p className="text-base font-medium text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{formatText(parts[0])}</p>
+                                      <p className="text-base text-slate-600 dark:text-slate-400 mt-2 pt-2 border-t border-slate-200 dark:border-[#2d3248] whitespace-pre-wrap">{formatText(parts.slice(1).join(' / '))}</p>
+                                    </>
+                                  );
+                                }
+                                return <p className="text-base font-medium text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{formatText(viewingWord.definition)}</p>;
+                              })()}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {(viewingWord as any).isUnsaved ? (
-                          <button 
-                            onClick={handleSaveNewWord} 
-                            disabled={savingEdit}
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-bold transition-colors text-sm shadow-sm flex items-center gap-2 disabled:opacity-50"
-                          >
-                            {savingEdit ? 'Đang lưu...' : 'Lưu từ này'}
-                          </button>
-                        ) : (
-                          !isEditingWord && (
-                            <>
-                              <button 
-                                onClick={handleRefreshAI} 
-                                disabled={refreshingAI}
-                                title="Làm mới AI Insights (Lấy lại dữ liệu chuyên sâu)"
-                                className={`p-2 rounded-full transition-colors ${refreshingAI ? 'text-teal-400 bg-teal-50 dark:bg-teal-900/10 animate-pulse' : 'text-teal-600 hover:text-teal-700 hover:bg-teal-100 bg-teal-50 dark:text-teal-400 dark:bg-teal-900/20 dark:hover:bg-teal-900/40'}`}
-                              >
-                                <Lightbulb size={20} className={refreshingAI ? "animate-spin" : ""} />
-                              </button>
-                              <button onClick={handleEditWord} title="Chỉnh sửa từ vựng" className="p-2 text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 rounded-full transition-colors">
-                                <Edit2 size={20} />
-                              </button>
-                            </>
-                          )
-                        )}
-                        <button onClick={() => { setViewingWord(null); setIsEditingWord(false); }} title="Đóng (Esc)" className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-[#2d3248] dark:hover:bg-[#3f4561] rounded-full transition-colors">
-                          <X size={20} />
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {isEditingWord ? (
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Từ vựng</label>
-                          <input 
-                            value={editFormData.word || ''} 
-                            onChange={e => setEditFormData({...editFormData, word: e.target.value})}
-                            className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-4">
-                          <div className="flex-1">
-                            <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Loại từ</label>
-                            <input 
-                              value={editFormData.part_of_speech || ''} 
-                              onChange={e => setEditFormData({...editFormData, part_of_speech: e.target.value})}
-                              className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
-                              placeholder="Noun, Verb..."
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Phát âm</label>
-                            <input 
-                              value={editFormData.phonetic || ''} 
-                              onChange={e => setEditFormData({...editFormData, phonetic: e.target.value})}
-                              className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Nghĩa ngắn gọn</label>
-                          <input 
-                            value={editFormData.short_meaning_vi || ''} 
-                            onChange={e => setEditFormData({...editFormData, short_meaning_vi: e.target.value})}
-                            className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Định nghĩa chi tiết</label>
-                          <textarea 
-                            rows={3}
-                            value={editFormData.definition || ''} 
-                            onChange={e => setEditFormData({...editFormData, definition: e.target.value})}
-                            className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Ví dụ</label>
-                          <textarea 
-                            rows={2}
-                            value={editFormData.example || ''} 
-                            onChange={e => setEditFormData({...editFormData, example: e.target.value})}
-                            className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Dịch nghĩa Ví dụ</label>
-                          <textarea 
-                            rows={2}
-                            value={editFormData.example_translation_vi || ''} 
-                            onChange={e => setEditFormData({...editFormData, example_translation_vi: e.target.value})}
-                            className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Từ loại liên quan (cách nhau bởi dấu phẩy)</label>
-                          <input 
-                            value={editFormData.forms?.join(', ') || ''} 
-                            onChange={e => setEditFormData({...editFormData, forms: e.target.value.split(',').map(s => s.trim())})}
-                            className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-bold text-slate-500 dark:text-slate-400">Collocations (cách nhau bởi dấu phẩy)</label>
-                          <input 
-                            value={editFormData.collocations?.join(', ') || ''} 
-                            onChange={e => setEditFormData({...editFormData, collocations: e.target.value.split(',').map(s => s.trim())})}
-                            className="w-full bg-slate-50 dark:bg-[#151822] text-slate-800 dark:text-white border border-slate-200 dark:border-[#2d3248] rounded-xl px-4 py-2 mt-1 focus:border-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2 mt-4 p-3 bg-green-50 dark:bg-green-500/10 rounded-xl border border-green-200 dark:border-green-500/20">
-                          <input 
-                            type="checkbox"
-                            id="isMastered"
-                            checked={editFormData.isMastered || false}
-                            onChange={e => setEditFormData({...editFormData, isMastered: e.target.checked})}
-                            className="w-5 h-5 accent-green-500 cursor-pointer"
-                          />
-                          <label htmlFor="isMastered" className="font-bold text-green-700 dark:text-green-400 cursor-pointer select-none">
-                            Đã thành thạo (Không nhắc ôn tập)
-                          </label>
-                        </div>
-                        <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-slate-100 dark:border-[#2d3248]">
-                          <button onClick={() => setIsEditingWord(false)} disabled={savingEdit} className="px-4 py-2 rounded-xl font-medium text-slate-500 hover:bg-slate-50 dark:hover:bg-[#151822] transition-colors">
-                            Hủy
-                          </button>
-                          <button onClick={handleSaveEdit} disabled={savingEdit} className="px-6 py-2 rounded-xl font-bold bg-blue-500 text-white hover:bg-blue-600 transition-colors shadow-sm disabled:opacity-50">
-                            {savingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                    <div className="space-y-6">
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Definition</h4>
-                        <div className="bg-slate-50 dark:bg-[#151822] p-4 rounded-2xl border border-slate-100 dark:border-[#2d3248]">
+
                           {(() => {
-                            const formatText = (text: string) => {
-                              if (!text) return "";
-                              // Insert newline before numbers (e.g. " 1. ", " 2. ")
-                              let formatted = text.replace(/(?<!^)\s+(?=\d+\.)/g, '\n');
-                              // Insert newline before bullets (e.g. " - ")
-                              formatted = formatted.replace(/(?<!^)\s+(?=-\s)/g, '\n');
-                              return formatted;
-                            };
+                            const validForms = viewingWord.forms?.filter(f => !f.toLowerCase().includes('n/a') && f.trim() !== "") || [];
+                            if (validForms.length === 0) return null;
+                            return (
+                              <div>
+                                <h4 className="text-sm font-bold text-teal-600 dark:text-teal-500 uppercase tracking-wider mb-2">✨ AI Insights - Word Forms</h4>
+                                <div className="bg-teal-50 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-500/20 p-4 rounded-2xl">
+                                  <ul className="text-sm text-teal-800 dark:text-teal-300 font-medium leading-relaxed list-disc pl-4 space-y-1">
+                                    {validForms.map((form, idx) => (
+                                      <li key={idx}>{form}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </div>
+                            );
+                          })()}
 
-                            const parts = viewingWord.definition.split(' / ');
-                            if (parts.length >= 2) {
-                              return (
-                                <>
-                                  <p className="text-base font-medium text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{formatText(parts[0])}</p>
-                                  <p className="text-base text-slate-600 dark:text-slate-400 mt-2 pt-2 border-t border-slate-200 dark:border-[#2d3248] whitespace-pre-wrap">{formatText(parts.slice(1).join(' / '))}</p>
-                                </>
-                              );
-                            }
-                            return <p className="text-base font-medium text-slate-800 dark:text-slate-200 whitespace-pre-wrap">{formatText(viewingWord.definition)}</p>;
+                          {viewingWord.example && (
+                            <div>
+                              <h4 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Example</h4>
+                              <div className="pl-4 border-l-4 border-blue-400 dark:border-blue-500 py-1 space-y-2">
+                                <p className="text-base italic text-slate-600 dark:text-slate-400">"{viewingWord.example}"</p>
+                                {viewingWord.example_translation_vi && (
+                                  <p className="text-sm font-medium text-slate-500 dark:text-slate-500">{viewingWord.example_translation_vi}</p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {(() => {
+                            const validCollocations = viewingWord.collocations?.filter(c => !c.toLowerCase().includes('n/a') && c.trim() !== "") || [];
+                            if (validCollocations.length === 0) return null;
+                            return (
+                              <div>
+                                <h4 className="text-sm font-bold text-teal-600 dark:text-teal-500 uppercase tracking-wider mb-2">✨ AI Insights - Collocations</h4>
+                                <div className="bg-teal-50 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-500/20 p-4 rounded-2xl flex flex-wrap gap-2">
+                                  {validCollocations.map((coll, idx) => (
+                                    <span key={idx} className="bg-white dark:bg-[#1e2235] text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30 px-3 py-1 rounded-full text-sm font-medium shadow-sm">
+                                      {coll}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            );
                           })()}
                         </div>
-                      </div>
-
-                      {(() => {
-                        const validForms = viewingWord.forms?.filter(f => !f.toLowerCase().includes('n/a') && f.trim() !== "") || [];
-                        if (validForms.length === 0) return null;
-                        return (
-                          <div>
-                            <h4 className="text-sm font-bold text-teal-600 dark:text-teal-500 uppercase tracking-wider mb-2">✨ AI Insights - Word Forms</h4>
-                            <div className="bg-teal-50 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-500/20 p-4 rounded-2xl">
-                              <ul className="text-sm text-teal-800 dark:text-teal-300 font-medium leading-relaxed list-disc pl-4 space-y-1">
-                                {validForms.map((form, idx) => (
-                                  <li key={idx}>{form}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {viewingWord.example && (
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Example</h4>
-                          <div className="pl-4 border-l-4 border-blue-400 dark:border-blue-500 py-1 space-y-2">
-                            <p className="text-base italic text-slate-600 dark:text-slate-400">"{viewingWord.example}"</p>
-                            {viewingWord.example_translation_vi && (
-                              <p className="text-sm font-medium text-slate-500 dark:text-slate-500">{viewingWord.example_translation_vi}</p>
-                            )}
-                          </div>
-                        </div>
                       )}
-
-                      {(() => {
-                        const validCollocations = viewingWord.collocations?.filter(c => !c.toLowerCase().includes('n/a') && c.trim() !== "") || [];
-                        if (validCollocations.length === 0) return null;
-                        return (
-                          <div>
-                            <h4 className="text-sm font-bold text-teal-600 dark:text-teal-500 uppercase tracking-wider mb-2">✨ AI Insights - Collocations</h4>
-                            <div className="bg-teal-50 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-500/20 p-4 rounded-2xl flex flex-wrap gap-2">
-                              {validCollocations.map((coll, idx) => (
-                                <span key={idx} className="bg-white dark:bg-[#1e2235] text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30 px-3 py-1 rounded-full text-sm font-medium shadow-sm">
-                                  {coll}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })()}
                     </div>
-                    )}
-                  </div>
+                  </motion.div>
                 </motion.div>
-              </motion.div>
-            )}
+              )}
             </AnimatePresence>
 
             {/* Pagination Controls */}
@@ -1069,11 +1068,10 @@ Return a JSON object strictly following this structure (do not include markdown 
                     <button
                       key={i}
                       onClick={() => setCurrentPage(i + 1)}
-                      className={`w-10 h-10 rounded-lg font-bold text-sm transition-colors ${
-                        currentPage === i + 1 
-                          ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20' 
-                          : 'bg-white dark:bg-[#1e2235] border border-slate-200 dark:border-[#2d3248] text-slate-500 hover:border-blue-500 hover:text-blue-500'
-                      }`}
+                      className={`w-10 h-10 rounded-lg font-bold text-sm transition-colors ${currentPage === i + 1
+                        ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20'
+                        : 'bg-white dark:bg-[#1e2235] border border-slate-200 dark:border-[#2d3248] text-slate-500 hover:border-blue-500 hover:text-blue-500'
+                        }`}
                     >
                       {i + 1}
                     </button>
@@ -1097,13 +1095,13 @@ Return a JSON object strictly following this structure (do not include markdown 
             <div className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 border border-slate-800 dark:border-slate-200">
               <span className="font-bold">{selectedWords.length} từ đã chọn</span>
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={() => setSelectedWords([])}
                   className="px-4 py-2 rounded-xl font-medium bg-slate-800 dark:bg-slate-100 hover:bg-slate-700 dark:hover:bg-slate-200 transition-colors"
                 >
                   Hủy
                 </button>
-                <button 
+                <button
                   onClick={handleDeleteSelected}
                   disabled={deleting}
                   className="px-4 py-2 rounded-xl font-bold bg-red-500 hover:bg-red-600 text-white shadow-sm shadow-red-500/20 transition-colors flex items-center gap-2"
@@ -1128,7 +1126,7 @@ Return a JSON object strictly following this structure (do not include markdown 
             {selectedTopic ? `Topic: ${selectedTopic}` : 'Your Vocabulary'}
           </h1>
           <p className="text-blue-100 font-medium text-lg">
-            {selectedTopic 
+            {selectedTopic
               ? `You have ${groupedWords[selectedTopic]?.length || 0} words in this topic.`
               : `You have saved ${words.length} words across ${Object.keys(groupedWords).length} topics.`}
           </p>

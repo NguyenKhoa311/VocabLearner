@@ -123,6 +123,7 @@ export default function Review() {
           interval,
           nextReviewDate,
           srsLevel,
+          repetition: (currentWord.repetition || 0) + 1,
           isMastered: false
         });
       } catch (error) {
@@ -140,6 +141,7 @@ export default function Review() {
       try {
         const wordRef = doc(db, 'words', currentWord.id);
         await updateDoc(wordRef, {
+          repetition: (currentWord.repetition || 0) + 1,
           isMastered: true
         });
       } catch (error) {
@@ -389,19 +391,19 @@ export default function Review() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-[#11131f] text-slate-200 p-8 font-sans -m-8 rounded-[2.5rem] border border-[#2d3248]/50 shadow-2xl relative overflow-hidden">
+    <div className="min-h-[calc(100vh-4rem)] bg-[#11131f] text-slate-200 p-4 sm:p-8 font-sans -m-4 sm:-m-8 rounded-2xl sm:rounded-[2.5rem] border border-[#2d3248]/50 shadow-2xl relative overflow-hidden">
       {/* Background Glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-500/5 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[800px] h-[400px] sm:h-[800px] bg-blue-500/5 rounded-full blur-[100px] pointer-events-none"></div>
 
       {/* Header */}
-      <div className="max-w-4xl mx-auto mb-6 flex items-center justify-between">
+      <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
         <div className="flex items-center gap-4">
           <button onClick={() => setMode('idle')} className="text-slate-400 hover:text-white transition-colors">
             ← Quay lại
           </button>
-          <h1 className="text-2xl font-bold text-white tracking-wide">Ôn Tập {mode === 'srs' ? 'Tổng Hợp' : `Theo Chủ Đề: ${word.topic || 'Uncategorized'}`}</h1>
+          <h1 className="text-lg sm:text-2xl font-bold text-white tracking-wide">Ôn Tập {mode === 'srs' ? 'Tổng Hợp' : `Theo Chủ Đề: ${word.topic || 'Uncategorized'}`}</h1>
         </div>
-        <div className="flex gap-2 text-sm text-blue-400 font-medium">
+        <div className="flex gap-2 text-sm text-blue-400 font-medium self-end sm:self-auto">
           <span>TIẾN ĐỘ</span>
           <span className="text-white">{currentIndex} / {studyList.length} THẺ</span>
         </div>
@@ -423,23 +425,23 @@ export default function Review() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3 }}
-          className="max-w-4xl mx-auto bg-white/95 dark:bg-[#1e2235]/95 backdrop-blur-xl border border-slate-200 dark:border-[#2d3248] rounded-3xl p-8 relative shadow-2xl"
+          className="max-w-4xl mx-auto bg-white/95 dark:bg-[#1e2235]/95 backdrop-blur-xl border border-slate-200 dark:border-[#2d3248] rounded-2xl sm:rounded-3xl p-5 sm:p-8 relative shadow-2xl mt-4 sm:mt-0"
         >
           {mode === 'srs' && (
-          <div className="absolute top-6 right-6 bg-[#dbeafe] text-blue-700 px-3 py-1 rounded-md text-sm font-bold">
+          <div className="absolute top-4 right-4 sm:top-6 sm:right-6 bg-[#dbeafe] text-blue-700 px-2 py-1 sm:px-3 sm:py-1 rounded-md text-xs sm:text-sm font-bold">
             Đã ôn {word.repetition || 0} lần
           </div>
         )}
-        <div className="absolute top-6 left-6 text-blue-400">
+        <div className="absolute top-4 left-4 sm:top-6 sm:left-6 text-blue-400 hidden sm:block">
           <AlertTriangle size={20} />
         </div>
 
-        <div className="text-center mt-4">
-          <div className="flex flex-col items-center justify-center gap-3 mb-2">
-            <h2 className={`font-bold text-blue-600 dark:text-blue-400 text-center ${word.type === 'sentence' ? 'text-2xl leading-relaxed' : 'text-4xl'}`}>
+        <div className="text-center mt-6 sm:mt-4">
+          <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 mb-2">
+            <h2 className={`font-bold text-blue-600 dark:text-blue-400 text-center px-4 ${word.type === 'sentence' ? 'text-xl sm:text-2xl leading-relaxed' : 'text-3xl sm:text-4xl'}`}>
               {word.short_meaning_vi || word.word}
             </h2>
-            <span className="bg-slate-100 dark:bg-[#2d3248] text-slate-600 dark:text-slate-300 px-3 py-1 rounded-lg text-sm border border-slate-200 dark:border-[#3e445b] font-medium">
+            <span className="bg-slate-100 dark:bg-[#2d3248] text-slate-600 dark:text-slate-300 px-2 py-1 sm:px-3 sm:py-1 rounded-lg text-xs sm:text-sm border border-slate-200 dark:border-[#3e445b] font-medium">
               {word.type === 'sentence' ? 'Sentence' : word.type === 'collocation' ? 'Collocation' : (word.part_of_speech || "Từ vựng")}
             </span>
           </div>
@@ -452,31 +454,31 @@ export default function Review() {
             </div>
           )}
 
-          <div className="mt-8 space-y-4">
+          <div className="mt-6 sm:mt-8 space-y-4 px-2 sm:px-0">
             <div>
-              <p className="text-slate-500 dark:text-[#5c739e] text-sm mb-1">Định nghĩa Tiếng Anh:</p>
-              <p className="text-blue-600 dark:text-[#60a5fa] text-lg">{defEn}</p>
+              <p className="text-slate-500 dark:text-[#5c739e] text-xs sm:text-sm mb-1">Định nghĩa Tiếng Anh:</p>
+              <p className="text-blue-600 dark:text-[#60a5fa] text-base sm:text-lg">{defEn}</p>
             </div>
             
             {defVi && (
               <div>
-                <p className="text-slate-500 dark:text-[#5c739e] text-sm mb-1">Định nghĩa:</p>
-                <p className="text-blue-600 dark:text-[#60a5fa] text-lg">{defVi}</p>
+                <p className="text-slate-500 dark:text-[#5c739e] text-xs sm:text-sm mb-1">Định nghĩa:</p>
+                <p className="text-blue-600 dark:text-[#60a5fa] text-base sm:text-lg">{defVi}</p>
               </div>
             )}
 
             {word.example && (
-              <div className="mt-6">
-                <p className="text-slate-500 dark:text-[#5c739e] text-sm mb-2">Ví dụ:</p>
+              <div className="mt-4 sm:mt-6">
+                <p className="text-slate-500 dark:text-[#5c739e] text-xs sm:text-sm mb-2">Ví dụ:</p>
                 {isRevealed ? (
-                  <p className="text-slate-800 dark:text-white text-lg font-medium italic" dangerouslySetInnerHTML={{ __html: word.example.replace(regex, `<span class="text-green-600 dark:text-green-500 font-bold">${word.word}</span>`) }} />
+                  <p className="text-slate-800 dark:text-white text-base sm:text-lg font-medium italic" dangerouslySetInnerHTML={{ __html: word.example.replace(regex, `<span class="text-green-600 dark:text-green-500 font-bold">${word.word}</span>`) }} />
                 ) : (
-                  <p className="text-slate-800 dark:text-white text-lg font-medium italic">
+                  <p className="text-slate-800 dark:text-white text-base sm:text-lg font-medium italic">
                     {maskedExample}
                   </p>
                 )}
                 {word.example_translation_vi && (
-                  <p className="text-slate-500 dark:text-[#8b92a5] text-base mt-2 font-medium">
+                  <p className="text-slate-500 dark:text-[#8b92a5] text-sm sm:text-base mt-2 font-medium">
                     {word.example_translation_vi}
                   </p>
                 )}
@@ -485,18 +487,18 @@ export default function Review() {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col items-center">
+        <div className="mt-8 sm:mt-12 flex flex-col items-center w-full">
           {!isRevealed ? (
-            <div className="w-full max-w-lg flex flex-col items-center">
-              <div className="flex flex-col items-center gap-4 mb-6">
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <div className="border border-dashed border-slate-300 dark:border-[#3e445b] bg-slate-50 dark:bg-[#1a1d2d] rounded-lg px-8 py-3 text-2xl tracking-widest text-slate-800 dark:text-white font-mono shadow-inner min-w-[120px] text-center whitespace-pre-wrap">
+            <div className="w-full max-w-lg flex flex-col items-center px-2 sm:px-0">
+              <div className="flex flex-col items-center gap-4 mb-4 sm:mb-6 w-full">
+                <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full sm:w-auto">
+                  <div className="border border-dashed border-slate-300 dark:border-[#3e445b] bg-slate-50 dark:bg-[#1a1d2d] rounded-lg px-4 sm:px-8 py-2 sm:py-3 text-xl sm:text-2xl tracking-widest text-slate-800 dark:text-white font-mono shadow-inner min-w-[120px] text-center whitespace-pre-wrap break-all w-full sm:w-auto">
                     {getHintDisplay()}
                   </div>
                   <button 
                     onClick={handleHint}
                     disabled={hintLevel > maxLetterHints}
-                    className="flex items-center gap-2 border border-[#92400e] text-[#f59e0b] px-4 py-2 rounded-full hover:bg-[#92400e]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex justify-center items-center gap-2 border border-[#92400e] text-[#f59e0b] px-4 py-2 rounded-full hover:bg-[#92400e]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                   >
                     <Lightbulb size={18} /> Gợi ý
                   </button>
@@ -569,18 +571,18 @@ export default function Review() {
       </AnimatePresence>
 
       {/* Footer Stats */}
-      <div className="max-w-lg mx-auto flex items-center justify-center gap-12 mt-8 mb-6">
+      <div className="max-w-lg mx-auto flex items-center justify-center gap-6 sm:gap-12 mt-6 sm:mt-8 mb-6">
         <div className="text-center">
-          <p className="text-orange-500 font-bold text-xl">{studyList.length - currentIndex}</p>
-          <p className="text-[#5c739e] text-sm">Còn lại</p>
+          <p className="text-orange-500 font-bold text-lg sm:text-xl">{studyList.length - currentIndex}</p>
+          <p className="text-[#5c739e] text-xs sm:text-sm">Còn lại</p>
         </div>
         <div className="text-center">
-          <p className="text-green-500 font-bold text-xl">{currentIndex}</p>
-          <p className="text-[#5c739e] text-sm">Đã Hoàn thành</p>
+          <p className="text-green-500 font-bold text-lg sm:text-xl">{currentIndex}</p>
+          <p className="text-[#5c739e] text-xs sm:text-sm">Đã Hoàn thành</p>
         </div>
         <div className="text-center">
-          <p className="text-blue-400 font-bold text-xl">{studyList.length}</p>
-          <p className="text-[#5c739e] text-sm">Tổng cộng</p>
+          <p className="text-blue-400 font-bold text-lg sm:text-xl">{studyList.length}</p>
+          <p className="text-[#5c739e] text-xs sm:text-sm">Tổng cộng</p>
         </div>
       </div>
 

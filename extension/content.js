@@ -39,25 +39,28 @@ document.addEventListener("mouseup", (e) => {
   // If clicking inside tooltip, do nothing
   if (tooltipContainer && tooltipContainer.contains(e.target)) return;
 
-  const selection = window.getSelection();
-  const text = selection.toString().trim();
+  // Use a slight delay to ensure browser selection has completed updating
+  setTimeout(() => {
+    const selection = window.getSelection();
+    const text = selection.toString().trim();
 
-  // Allow lookups for short words or longer sentences (up to 300 characters)
-  if (text.length > 0 && text.length <= 300) {
-    currentSelection = text;
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    
-    // Position below the selection
-    const x = rect.left + window.scrollX;
-    const y = rect.bottom + window.scrollY + 10;
-    
-    showTooltip(x, y);
-    renderLookupPrompt();
-  } else {
-    hideTooltip();
-  }
-});
+    // Allow lookups for short words or longer sentences (up to 300 characters)
+    if (text.length > 0 && text.length <= 300) {
+      currentSelection = text;
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      
+      // Position below the selection
+      const x = rect.left + window.scrollX;
+      const y = rect.bottom + window.scrollY + 10;
+      
+      showTooltip(x, y);
+      renderLookupPrompt();
+    } else {
+      hideTooltip();
+    }
+  }, 10);
+}, true); // Use capture phase (true) to bypass stopPropagation from website scripts
 
 function renderLookupPrompt() {
   tooltipContainer.innerHTML = `

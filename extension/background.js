@@ -5,7 +5,7 @@ const pendingEnrichments = new Map();
 async function fetchFromGeminiWithRotation(prompt) {
   if (GEMINI_API_KEYS.length === 0 || GEMINI_API_KEYS[0] === "YOUR_GEMINI_API_KEY") return null;
   const GOOGLE_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-lite-latest", "gemini-flash-latest", "gemini-2.5-pro"];
-  
+
   for (const key of GEMINI_API_KEYS) {
     for (const model of GOOGLE_MODELS) {
       try {
@@ -73,7 +73,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Save immediately with current data
     saveToFirestore(request.data).then(docId => {
       sendResponse({ success: true, docId: docId });
-      
+
       // If data is incomplete (missing AI insights), fetch and update in background
       if (request.data.topic === "Uncategorized" || !request.data.topic) {
         console.log("Background AI enrichment started for saved word:", request.data.word);
@@ -89,7 +89,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       console.error("Save error:", err);
       sendResponse({ success: false, error: err.message });
     });
-    return true; 
+    return true;
   }
 });
 
@@ -117,7 +117,7 @@ async function enrichWord(word) {
 
   const enrichPromise = _enrichWordCore(word);
   pendingEnrichments.set(normalizedWord, enrichPromise);
-  
+
   try {
     const result = await enrichPromise;
     pendingEnrichments.delete(normalizedWord);
@@ -170,7 +170,7 @@ Return a JSON object strictly following this structure (do not include markdown 
 async function checkWordInFirestore(word) {
   const FIREBASE_PROJECT_ID = "vocalhelper";
   const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents:runQuery`;
-  
+
   const queryData = {
     structuredQuery: {
       from: [{ collectionId: "words" }],
@@ -180,14 +180,14 @@ async function checkWordInFirestore(word) {
       limit: 1
     }
   };
-  
+
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(queryData)
     });
-    
+
     if (res.ok) {
       const data = await res.json();
       if (data && data.length > 0 && data[0].document) {
@@ -239,9 +239,9 @@ async function lookupWord(word) {
   try {
     const dictPromise = safeJsonFetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
     const transPromise = safeJsonFetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=${encodeURIComponent(word)}`);
-    
+
     const [dictData, transData] = await Promise.all([dictPromise, transPromise]);
-    
+
     if (dictData && dictData[0] && transData && transData[0] && transData[0][0]) {
       console.log("Fast Dictionary lookup successful for:", word);
       const entry = dictData[0];
@@ -250,7 +250,7 @@ async function lookupWord(word) {
       const phonetic = entry.phonetics?.find(p => p.text)?.text || entry.phonetic || "";
       const pos = entry.meanings[0]?.partOfSpeech || "";
       const example = entry.meanings[0]?.definitions[0]?.example || "";
-      
+
       return {
         word: entry.word || word,
         phonetic: phonetic,
@@ -270,7 +270,7 @@ async function lookupWord(word) {
 
   // Fallback to Gemini AI if fast dictionary fails (e.g. phrases, idioms)
   console.log("Falling back to Gemini AI lookup for:", word);
-  
+
   if (GEMINI_API_KEYS.length === 0 || GEMINI_API_KEYS[0] === "YOUR_GEMINI_API_KEY") {
     console.warn("Please configure GEMINI_API_KEY in background.js");
     // Fallback Mock Data for demo purposes if no API key
@@ -304,18 +304,18 @@ Return a JSON object strictly following this structure (do not include markdown 
       const data = await res.json();
       if (data.candidates && data.candidates.length > 0) {
         rawText = data.candidates[0].content.parts[0].text;
-      let textResult = rawText;
-      
-      // Robust JSON extraction: find the first '{' and last '}'
-      const jsonMatch = textResult.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        textResult = jsonMatch[0];
-      } else {
-        // Fallback cleanup if regex fails somehow
-        textResult = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
-      }
-      
-      return JSON.parse(textResult);
+        let textResult = rawText;
+
+        // Robust JSON extraction: find the first '{' and last '}'
+        const jsonMatch = textResult.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          textResult = jsonMatch[0];
+        } else {
+          // Fallback cleanup if regex fails somehow
+          textResult = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
+        }
+
+        return JSON.parse(textResult);
       }
     }
   } catch (error) {
@@ -368,7 +368,7 @@ Return a JSON object strictly following this structure (do not include markdown 
 async function saveToFirestore(data) {
   const FIREBASE_PROJECT_ID = "vocalhelper";
   const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/words`;
-  
+
   const firestoreData = {
     fields: {
       word: { stringValue: data.word },
@@ -385,7 +385,7 @@ async function saveToFirestore(data) {
       srsLevel: { integerValue: 0 }
     }
   };
-  
+
   if (data.forms && data.forms.length > 0) {
     firestoreData.fields.forms = {
       arrayValue: {
@@ -393,7 +393,7 @@ async function saveToFirestore(data) {
       }
     };
   }
-  
+
   if (data.collocations && data.collocations.length > 0) {
     firestoreData.fields.collocations = {
       arrayValue: {
@@ -407,7 +407,7 @@ async function saveToFirestore(data) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(firestoreData)
   });
-  
+
   if (!res.ok) {
     const errorText = await res.text();
     throw new Error(`Failed to save: ${errorText}`);
@@ -420,7 +420,7 @@ async function saveToFirestore(data) {
 async function updateFirestoreDoc(docId, enrichData) {
   const FIREBASE_PROJECT_ID = "vocalhelper";
   const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/words/${docId}?updateMask.fieldPaths=topic&updateMask.fieldPaths=definition&updateMask.fieldPaths=forms&updateMask.fieldPaths=collocations&updateMask.fieldPaths=phonetic`;
-  
+
   // We need to fetch the existing document first to combine the definitions
   const getRes = await fetch(`https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/words/${docId}`);
   let existingDefEn = "";
@@ -444,7 +444,7 @@ async function updateFirestoreDoc(docId, enrichData) {
   if (enrichData.example) {
     firestoreData.fields.example = { stringValue: enrichData.example };
   }
-  
+
   if (enrichData.example_translation_vi) {
     firestoreData.fields.example_translation_vi = { stringValue: enrichData.example_translation_vi };
   }
@@ -460,7 +460,7 @@ async function updateFirestoreDoc(docId, enrichData) {
       arrayValue: { values: enrichData.forms.map(f => ({ stringValue: f })) }
     };
   }
-  
+
   if (enrichData.collocations && enrichData.collocations.length > 0) {
     firestoreData.fields.collocations = {
       arrayValue: { values: enrichData.collocations.map(c => ({ stringValue: c })) }
@@ -508,12 +508,12 @@ async function checkDueWords() {
     const url = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/words?pageSize=1000`;
     const res = await fetch(url);
     const data = await res.json();
-    
+
     if (!data.documents) return;
-    
+
     const now = Date.now();
     let dueCount = 0;
-    
+
     for (const doc of data.documents) {
       if (doc.fields && doc.fields.nextReviewDate) {
         let reviewTime = 0;
@@ -524,7 +524,7 @@ async function checkDueWords() {
         } else if (doc.fields.nextReviewDate.timestampValue) {
           reviewTime = new Date(doc.fields.nextReviewDate.timestampValue).getTime();
         }
-        
+
         if (reviewTime <= now) {
           dueCount++;
         }
@@ -532,7 +532,7 @@ async function checkDueWords() {
         dueCount++;
       }
     }
-    
+
     if (dueCount > 0) {
       chrome.notifications.create("srs-reminder-notification", {
         type: "basic",
