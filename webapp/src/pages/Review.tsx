@@ -26,10 +26,19 @@ export default function Review() {
 
 
 
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
   const startSrsMode = () => {
     const now = Date.now();
     const due = allWords.filter(w => !w.isMastered && (!w.nextReviewDate || w.nextReviewDate <= now));
-    setStudyList(due);
+    setStudyList(shuffleArray(due));
     setMode('srs');
     setCurrentIndex(0);
     setSessionComplete(false);
@@ -41,7 +50,7 @@ export default function Review() {
 
   const startCramMode = (topic: string) => {
     const topicWords = allWords.filter(w => (w.topic || 'Uncategorized') === topic);
-    setStudyList(topicWords);
+    setStudyList(shuffleArray(topicWords));
     setMode('cram');
     setCurrentIndex(0);
     setSessionComplete(false);
