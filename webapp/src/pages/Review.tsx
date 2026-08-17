@@ -405,24 +405,43 @@ export default function Review() {
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[800px] h-[400px] sm:h-[800px] bg-blue-500/5 rounded-full blur-[100px] pointer-events-none"></div>
 
       {/* Header */}
-      <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
+      <div className="max-w-4xl w-full mx-auto mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 relative z-10">
         <div className="flex items-center gap-4">
-          <button onClick={() => setMode('idle')} className="text-slate-400 hover:text-white transition-colors">
-            ← Quay lại
+          <button onClick={() => setMode('idle')} className="text-slate-400 hover:text-red-400 transition-colors flex items-center gap-1 font-medium bg-slate-800/30 px-3 py-1.5 rounded-lg border border-slate-700/50">
+            <X size={18} /> Thoát
           </button>
           <h1 className="text-lg sm:text-2xl font-bold text-white tracking-wide">Ôn Tập {mode === 'srs' ? 'Tổng Hợp' : `Theo Chủ Đề: ${word.topic || 'Uncategorized'}`}</h1>
         </div>
-        <div className="flex gap-2 text-sm text-blue-400 font-medium self-end sm:self-auto">
-          <span>TIẾN ĐỘ</span>
-          <span className="text-white">{currentIndex} / {studyList.length} THẺ</span>
+        <div className="flex items-center gap-4 text-sm font-medium self-end sm:self-auto bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700/50">
+          <button 
+            onClick={() => {
+              if (currentIndex > 0) {
+                setCurrentIndex(currentIndex - 1);
+                setIsRevealed(false);
+                setInputValue('');
+                setHintLevel(0);
+                setIsWrongShake(false);
+                setIsCorrectlyGuessed(false);
+              }
+            }}
+            disabled={currentIndex === 0}
+            className={`flex items-center transition-colors ${currentIndex === 0 ? 'text-slate-600 cursor-not-allowed' : 'text-slate-300 hover:text-white'}`}
+          >
+            ← Thẻ trước
+          </button>
+          <div className="h-4 w-[1px] bg-slate-600"></div>
+          <div className="flex gap-2">
+            <span className="text-blue-400">TIẾN ĐỘ</span>
+            <span className="text-white">{currentIndex + 1} / {studyList.length}</span>
+          </div>
         </div>
       </div>
       
       {/* Progress Bar */}
-      <div className="max-w-4xl mx-auto h-2 bg-[#1f2336] rounded-full mb-8 overflow-hidden">
+      <div className="max-w-4xl w-full mx-auto h-2 bg-[#1f2336] rounded-full mb-8 overflow-hidden relative z-10 border border-[#2d3248]">
         <div 
-          className="h-full bg-blue-500 transition-all duration-300"
-          style={{ width: `${(currentIndex / studyList.length) * 100}%` }}
+          className="h-full bg-blue-500 transition-all duration-300 shadow-[0_0_10px_rgba(59,130,246,0.6)]"
+          style={{ width: `${(Math.max(0, currentIndex) / studyList.length) * 100}%` }}
         />
       </div>
 

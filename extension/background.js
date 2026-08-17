@@ -515,7 +515,17 @@ async function checkDueWords() {
     let dueCount = 0;
 
     for (const doc of data.documents) {
-      if (doc.fields && doc.fields.nextReviewDate) {
+      if (!doc.fields) {
+        dueCount++;
+        continue;
+      }
+      
+      // Skip mastered words
+      if (doc.fields.isMastered && doc.fields.isMastered.booleanValue === true) {
+        continue;
+      }
+
+      if (doc.fields.nextReviewDate) {
         let reviewTime = 0;
         if (doc.fields.nextReviewDate.integerValue) {
           reviewTime = parseInt(doc.fields.nextReviewDate.integerValue, 10);

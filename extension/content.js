@@ -1,4 +1,5 @@
 let tooltipContainer = null;
+let tooltipContent = null;
 let currentSelection = "";
 let currentWordData = null;
 let isTooltipOpen = false;
@@ -7,11 +8,62 @@ function createTooltip() {
   if (tooltipContainer) return;
   tooltipContainer = document.createElement("div");
   tooltipContainer.id = "vocab-helper-tooltip";
+
+  const tooltipHeader = document.createElement("div");
+  tooltipHeader.id = "vocab-helper-header";
+  tooltipHeader.innerHTML = `<div style="width: 36px; height: 5px; background: #cbd5e1; border-radius: 3px; margin: 0 auto; cursor: grab;"></div>`;
+  tooltipHeader.style.cssText = "padding: 0 0 12px 0; display: flex; justify-content: center; align-items: center; cursor: grab; user-select: none;";
+  
+  tooltipContent = document.createElement("div");
+  tooltipContent.id = "vocab-helper-content";
+  
+  tooltipContainer.appendChild(tooltipHeader);
+  tooltipContainer.appendChild(tooltipContent);
   document.body.appendChild(tooltipContainer);
 
   // Prevent clicking inside the tooltip from closing it
   tooltipContainer.addEventListener("mousedown", (e) => {
     e.stopPropagation();
+  });
+
+  // Dragging logic
+  let isDragging = false;
+  let dragStartX, dragStartY, initialLeft, initialTop;
+
+  tooltipHeader.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    
+    const rect = tooltipContainer.getBoundingClientRect();
+    // Reset bottom/right constraints to allow absolute dragging via top/left
+    tooltipContainer.style.bottom = 'auto';
+    tooltipContainer.style.right = 'auto';
+    tooltipContainer.style.top = `${rect.top + window.scrollY}px`;
+    tooltipContainer.style.left = `${rect.left + window.scrollX}px`;
+    
+    initialLeft = rect.left + window.scrollX;
+    initialTop = rect.top + window.scrollY;
+    
+    tooltipHeader.style.cursor = "grabbing";
+    tooltipHeader.firstElementChild.style.cursor = "grabbing";
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+    tooltipContainer.style.left = `${initialLeft + dx}px`;
+    tooltipContainer.style.top = `${initialTop + dy}px`;
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (isDragging) {
+      isDragging = false;
+      tooltipHeader.style.cursor = "grab";
+      tooltipHeader.firstElementChild.style.cursor = "grab";
+    }
   });
 }
 
@@ -22,15 +74,33 @@ function hideTooltip() {
   }
 }
 
-function showTooltip(x, y) {
+function showTooltip(x, y, rect) {
   createTooltip();
   
-  // Ensure it doesn't go off-screen
+  // Ensure it doesn't go off-screen horizontally
   const maxLeft = window.innerWidth - 340; // 320 width + padding
   const safeX = Math.min(x, maxLeft);
-  
   tooltipContainer.style.left = `${safeX}px`;
-  tooltipContainer.style.top = `${y}px`;
+
+  // Smart vertical positioning
+  if (rect) {
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    
+    tooltipContainer.style.top = 'auto';
+    tooltipContainer.style.bottom = 'auto';
+    
+    if (spaceBelow < 350 && spaceAbove > spaceBelow) {
+      // Not enough space below, put it above
+      const bottomPos = document.documentElement.scrollHeight - (rect.top + window.scrollY) + 10;
+      tooltipContainer.style.bottom = `${bottomPos}px`;
+    } else {
+      tooltipContainer.style.top = `${y}px`;
+    }
+  } else {
+    tooltipContainer.style.top = `${y}px`;
+  }
+  
   tooltipContainer.classList.add("visible");
   isTooltipOpen = true;
 }
@@ -50,11 +120,10 @@ document.addEventListener("mouseup", (e) => {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
       
-      // Position below the selection
       const x = rect.left + window.scrollX;
       const y = rect.bottom + window.scrollY + 10;
       
-      showTooltip(x, y);
+      showTooltip(x, y, rect);
       renderLookupPrompt();
     } else {
       hideTooltip();
@@ -63,7 +132,7 @@ document.addEventListener("mouseup", (e) => {
 }, true); // Use capture phase (true) to bypass stopPropagation from website scripts
 
 function renderLookupPrompt() {
-  tooltipContainer.innerHTML = `
+  tooltipContent.innerHTML = `
     <div style="display: flex; flex-direction: column; gap: 10px;">
       <span style="font-size: 14px; font-weight: 500; color: #1f2937; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Tra cứu "${currentSelection}"?</span>
       <div style="display: flex; gap: 8px;">
@@ -98,8 +167,8 @@ function executeLookup(actionType) {
           const aiLoadingEl = document.createElement('div');
           aiLoadingEl.id = 'ai-enrich-loading';
           aiLoadingEl.innerHTML = `<span style="display:inline-block; animation: pulse 1.5s infinite;">✨ AI đang phân tích chuyên sâu...</span>`;
-          aiLoadingEl.style.cssText = `margin-top: 12px; font-size: 12px; color: #3b82f6; font-weight: 500; text-align: center; padding: 8px; background: #eff6ff; border-radius: 8px;`;
-          tooltipContainer.appendChild(aiLoadingEl);
+          aiLoadingEl.style.cssText = "margin-top: 12px; padding: 8px; background: #f0f9ff; color: #0369a1; border-radius: 6px; font-size: 12px; font-weight: 500; text-align: center; border: 1px solid #bae6fd;";
+          tooltipContent.appendChild(aiLoadingEl);
 
           // Fetch deep AI enrichment
           chrome.runtime.sendMessage({ action: "enrich", word: currentSelection }, (enrichResponse) => {
@@ -126,11 +195,11 @@ function executeLookup(actionType) {
 }
 
 function renderLoading() {
-  tooltipContainer.innerHTML = `<div class="vocab-loading">Looking up "${currentSelection}"...</div>`;
+  tooltipContent.innerHTML = `<div class="vocab-loading">Looking up "${currentSelection}"...</div>`;
 }
 
 function renderError() {
-  tooltipContainer.innerHTML = `
+  tooltipContent.innerHTML = `
     <div class="vocab-header">${currentSelection}</div>
     <div class="vocab-text" style="color: #ef4444;">Could not fetch information. You might need to login or configure API keys.</div>
   `;
@@ -151,7 +220,7 @@ function renderContent(data, isEnriched = false) {
        </ul>` 
     : '';
 
-  tooltipContainer.innerHTML = `
+  tooltipContent.innerHTML = `
     <div class="vocab-header" style="align-items: flex-start;">
       <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0;">
         <div style="display: flex; align-items: flex-start; gap: 6px; flex-wrap: wrap;">
@@ -241,7 +310,7 @@ function renderSentenceContent(data) {
     `;
   }
 
-  tooltipContainer.innerHTML = `
+  tooltipContent.innerHTML = `
     <div class="vocab-header" style="align-items: flex-start; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 8px;">
       <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0;">
         <span style="font-size: 11px; background: #fce7f3; color: #be185d; padding: 2px 6px; border-radius: 4px; border: 1px solid #fbcfe8; font-weight: 600; width: fit-content;">Sentence Translation</span>
